@@ -19,7 +19,18 @@
     .qstrip .meta { color: #6fcfa0; font-size: 13px; }
     .qstrip .amt { color: var(--gold); font-weight: 700; }
 
+    .hotseat-bar { text-align:center; padding: 8px 14px; margin-bottom: 12px; border-radius: 8px; background: rgba(244,196,48,0.08); border:1px solid rgba(212,175,55,0.4); color:#cfe9da; font-size:14px; }
+    .hotseat-bar b { color: var(--gold); font-size: 16px; }
+    .hotseat-bar .next { color:#6fcfa0; margin-left: 12px; }
     .hostq { font-size: 20px; text-align: center; padding: 16px; background: linear-gradient(180deg,#0a3522,#03160e); border:1px solid var(--rim); border-radius: 10px; margin-bottom: 14px; }
+
+    .player-list { display:flex; flex-direction:column; gap:6px; }
+    .player-row { display:flex; align-items:center; gap:8px; padding:8px 12px; background:#0a3522; border:1px solid #1c6b46; border-radius:8px; }
+    .player-row.current { border-color: var(--gold); background: rgba(244,196,48,0.12); box-shadow: 0 0 12px rgba(244,196,48,0.25); }
+    .player-row .seat { font-size:16px; width:22px; text-align:center; }
+    .player-row .pname { flex:1; font-weight:600; }
+    .player-row.current .pname { color: var(--gold); }
+    .player-row .ord { color:#6fcfa0; font-size:12px; width:20px; }
 
     .host-answers { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
     .host-ans { display:flex; align-items:center; gap:10px; padding: 12px 16px; border:2px solid var(--rim); border-radius: 8px; cursor: pointer; background:#0a3522; transition: all 0.15s; font-size: 16px; user-select:none; }
@@ -101,6 +112,7 @@
           </div>
         </div>
 
+        <div class="hotseat-bar" id="hotseatBar">In the hot seat: <b id="hotName">— no players —</b><span id="nextName" class="next"></span></div>
         <div class="hostq" id="hostQ">—</div>
         <div class="host-answers" id="hostAnswers"></div>
 
@@ -110,6 +122,7 @@
           <button id="btnRevealAll" class="ghost">Reveal All</button>
           <button id="btnLock" class="gold">🔒 Lock In</button>
           <button id="btnResult" class="green">Reveal Answer</button>
+          <button id="btnSkip" class="gold">⏭ Skip → Next Player</button>
           <button id="btnWalk" class="red">Walk Away</button>
           <button id="btnClearBanner" class="ghost">Clear Overlay</button>
         </div>
@@ -151,6 +164,16 @@
         </div>
         <div class="vote-tally" id="voteTally" style="margin-top:10px;"></div>
         <div class="small" id="voteUrl" style="margin-top:8px;"></div>
+      </div>
+
+      <div class="panel" style="margin-top:14px;">
+        <h2>🪑 Hot Seat &amp; Players</h2>
+        <div class="row">
+          <input type="text" id="playerName" placeholder="Add player name…" style="flex:1;min-width:160px;" />
+          <button id="btnAddPlayer" class="green">+ Add</button>
+        </div>
+        <div class="player-list" id="playerList" style="margin-top:10px;"></div>
+        <div class="small" id="playerHint" style="margin-top:8px;">Add the players in turn order. The ⏭ Skip button passes the hot seat to the next player, who takes on the same question.</div>
       </div>
 
       <div class="panel" style="margin-top:14px;">

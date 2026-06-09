@@ -85,6 +85,9 @@ function saveQuestions(questions) {
 
 let questions = loadQuestions();
 
+// Player roster for the hot seat. Persists across game resets / question changes.
+let players = []; // array of names; the one at state.currentPlayer is in the hot seat
+
 function freshPerQuestion() {
   return {
     questionVisible: false,
@@ -130,6 +133,7 @@ function freshGame() {
   return Object.assign({
     phase: 'idle',          // 'idle' (intro) | 'playing' | 'won' | 'lost' | 'walked'
     questionIndex: 0,
+    currentPlayer: 0,       // index into the players roster (the hot seat)
     lifelines: { fifty: false, phone: false, audience: false }, // true = used up
     banner: null,           // { kind: 'win'|'lose'|'walk', amount }
   }, freshPerQuestion());
@@ -155,6 +159,7 @@ function fullState() {
   return {
     ...state,
     questions,
+    players,
     ...ladderInfo(),
     voteCounts: counts,
     voteTotal: counts.reduce((a, b) => a + b, 0),
@@ -208,6 +213,51 @@ function handleAction(type, payload) {
       Object.assign(state, freshPerQuestion());
       state.questionIndex = idx;
       state.banner = null;
+      break;
+    }
+
+    // ---- Hot seat / players ----
+    case 'add_player': {
+      const name = (payload.name || '').trim().slice(0, 40);
+      if (name) players.push(name);
+      break;
+    }
+
+    case 'remove_player': {
+      const i = payload.index | 0;
+      if (i >= 0 && i < players.length) {
+        players.splice(i, 1);
+        if (state.currentPlayer >= players.length) {
+          state.currentPlayer = Math.max(0, players.length - 1);
+        }
+      }
+      break;
+    }
+
+    case 'set_players':
+      if (Array.isArray(payload.players)) {
+        players = payload.players.map((n) => String(n).trim().slice(0, 40)).filter(Boolean);
+        if (state.currentPlayer >= players.length) state.currentPlayer = 0;
+      }
+      break;
+
+    case 'set_hot_seat': {
+      const i = payload.index | 0;
+      if (i >= 0 && i < players.length) state.currentPlayer = i;
+      break;
+    }
+
+    case 'skip_player': {
+      // Current player passes; the next player takes the seat and faces the
+      // SAME question at the same prize level. Reset only the answer attempt.
+      if (players.length > 0) {
+        state.currentPlayer = (state.currentPlayer + 1) % players.length;
+      }
+      state.selectedAnswer = null;
+      state.lockedAnswer = null;
+      state.resultRevealed = false;
+      state.banner = null;
+      state.phase = 'playing';
       break;
     }
 

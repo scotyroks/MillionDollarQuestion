@@ -86,6 +86,9 @@ function render(s) {
     $('voteUrl').dataset.set = '1';
   }
 
+  renderPlayers(s);
+  $('btnSkip').disabled = !s.players || s.players.length < 2;
+
   // Keep editor list fresh if open and not mid-edit-typing
   if ($('editor').classList.contains('show') && document.activeElement.tagName !== 'INPUT') {
     renderQList(s.questions);
@@ -103,6 +106,7 @@ function wire() {
   $('btnRevealAll').onclick = () => { Sound.play('reveal'); Game.action('reveal_all_answers'); };
   $('btnLock').onclick = () => { Sound.play('lock'); Game.action('lock_answer'); };
   $('btnResult').onclick = () => Game.action('reveal_result');
+  $('btnSkip').onclick = () => { Sound.play('lifeline'); Game.action('skip_player'); };
   $('btnWalk').onclick = () => { if (confirm('Walk away with the guaranteed amount?')) Game.action('walk_away'); };
   $('btnClearBanner').onclick = () => Game.action('clear_banner');
 
@@ -129,6 +133,61 @@ function wire() {
   $('btnNewQ').onclick = () => loadIntoForm(-1);
   $('btnSaveQ').onclick = saveQuestion;
   $('btnDeleteQ').onclick = deleteQuestion;
+
+  // Players / hot seat
+  $('btnAddPlayer').onclick = addPlayer;
+  $('playerName').addEventListener('keydown', (e) => { if (e.key === 'Enter') addPlayer(); });
+}
+
+function addPlayer() {
+  const input = $('playerName');
+  const name = input.value.trim();
+  if (!name) return;
+  Game.action('add_player', { name });
+  input.value = '';
+  input.focus();
+}
+
+function renderPlayers(s) {
+  const players = s.players || [];
+  const list = $('playerList');
+  // Hot-seat header
+  if (players.length) {
+    const cur = players[s.currentPlayer] || players[0];
+    $('hotName').textContent = cur;
+    if (players.length > 1) {
+      const nextIdx = (s.currentPlayer + 1) % players.length;
+      $('nextName').textContent = `· Next up: ${players[nextIdx]}`;
+    } else {
+      $('nextName').textContent = '';
+    }
+  } else {
+    $('hotName').textContent = '— no players —';
+    $('nextName').textContent = '';
+  }
+
+  // Don't rebuild while typing in the name field
+  if (document.activeElement === $('playerName')) return;
+  list.innerHTML = '';
+  players.forEach((name, i) => {
+    const row = document.createElement('div');
+    row.className = 'player-row' + (i === s.currentPlayer ? ' current' : '');
+    row.innerHTML = `<span class="ord">${i + 1}</span>`
+      + `<span class="seat">${i === s.currentPlayer ? '🪑' : ''}</span>`
+      + `<span class="pname">${escapeHtml(name)}</span>`;
+    const seat = document.createElement('button');
+    seat.className = 'small ghost';
+    seat.textContent = i === s.currentPlayer ? 'in seat' : 'set seat';
+    seat.disabled = i === s.currentPlayer;
+    seat.onclick = () => Game.action('set_hot_seat', { index: i });
+    const del = document.createElement('button');
+    del.className = 'small red';
+    del.textContent = '✕';
+    del.onclick = () => Game.action('remove_player', { index: i });
+    row.appendChild(seat);
+    row.appendChild(del);
+    list.appendChild(row);
+  });
 }
 
 function applyAudience() {

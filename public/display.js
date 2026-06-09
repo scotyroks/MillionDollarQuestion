@@ -12,6 +12,22 @@ function armAudio() {
 document.addEventListener('click', armAudio);
 document.addEventListener('keydown', armAudio);
 
+function renderHotseat(s) {
+  const bar = document.getElementById('hotseat');
+  const nameEl = document.getElementById('seatName');
+  const players = s.players || [];
+  if (!players.length) { bar.style.display = 'none'; return; }
+  bar.style.display = 'flex';
+  const name = players[s.currentPlayer] || players[0];
+  if (nameEl.textContent !== name) {
+    nameEl.textContent = name;
+    // Flash when the seat changes (e.g. after a skip)
+    nameEl.classList.remove('seat-flash');
+    void nameEl.offsetWidth; // restart animation
+    nameEl.classList.add('seat-flash');
+  }
+}
+
 function renderLadder(s) {
   const el = document.getElementById('ladder');
   el.innerHTML = '';
@@ -130,6 +146,7 @@ function cues(s) {
   }
   const ll = s.lifelines, pll = prev.lifelines || {};
   if ((ll.fifty && !pll.fifty) || (ll.phone && !pll.phone) || (ll.audience && !pll.audience)) Sound.play('lifeline');
+  if (prev.currentPlayer !== undefined && s.currentPlayer !== prev.currentPlayer) Sound.play('reveal');
 }
 
 function render(s) {
@@ -137,6 +154,7 @@ function render(s) {
   document.getElementById('playArea').style.display = s.phase === 'idle' ? 'none' : 'flex';
   document.getElementById('cornerLogo').style.display = s.phase === 'idle' ? 'none' : 'block';
 
+  renderHotseat(s);
   renderLadder(s);
   renderLifelines(s);
   renderQuestion(s);

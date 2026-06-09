@@ -12,6 +12,12 @@
     .play-area { width: 100%; display: flex; flex-direction: column; gap: 18px; margin-top: auto; }
     .side { position: relative; z-index: 1; display: flex; flex-direction: column; justify-content: center; }
     .lifelines { justify-content: center; margin-bottom: 14px; }
+    .hotseat { display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 14px; }
+    .hotseat .seat-icon { font-size: 22px; }
+    .hotseat .seat-label { color: var(--gold-soft); text-transform: uppercase; letter-spacing: 3px; font-size: clamp(11px, 1.2vw, 14px); }
+    .hotseat .seat-name { color: var(--gold); font-weight: 800; font-size: clamp(18px, 2.4vw, 32px); text-shadow: 0 0 18px rgba(244,196,48,0.45); padding: 2px 18px; border-left: 2px solid rgba(212,175,55,0.4); }
+    .seat-flash { animation: seatflash 0.7s ease; }
+    @keyframes seatflash { 0% { transform: scale(0.9); opacity: 0; } 60% { transform: scale(1.08); } 100% { transform: scale(1); opacity: 1; } }
 
     /* Intro / logo */
     .intro { position: relative; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 18px; }
@@ -62,6 +68,11 @@
           <div class="sub">Game Night</div>
         </div>
         <div class="play-area" id="playArea" style="display:none;">
+          <div class="hotseat" id="hotseat" style="display:none;">
+            <span class="seat-icon">🪑</span>
+            <span class="seat-label">In the hot seat</span>
+            <span class="seat-name" id="seatName"></span>
+          </div>
           <div class="lifelines" id="lifelines"></div>
           <div class="question-box" id="questionBox"></div>
           <div class="answers" id="answers"></div>

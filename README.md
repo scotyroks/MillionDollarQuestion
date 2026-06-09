@@ -73,6 +73,19 @@ Let everyone in the room vote on their phones for *Ask the Audience*:
 The voting page only ever receives the question and answer options — **the
 correct answer is never sent to anyone's phone.**
 
+### 🪑 Hot seat (multiple players)
+Run it as a rotating hot-seat game:
+
+1. In the **Hot Seat & Players** panel on the host screen, add each player's
+   name in turn order.
+2. The first player is in the hot seat — their name shows on the contestant
+   screen. It's a single shared prize ladder.
+3. If the current player is unsure, hit **⏭ Skip → Next Player**. The hot seat
+   passes to the next person, who takes on the **same question at the same
+   prize level**. The answer attempt resets so they can lock in their own choice.
+4. You can also jump the seat to anyone with **set seat**, or remove a player
+   with **✕**. The roster survives **Reset**, so you can replay with the same group.
+
 ### Editing questions
 Click **Edit Questions ✎** on the host screen to add, edit, reorder by saving,
 or delete questions live. Pick the correct answer with the radio button.
