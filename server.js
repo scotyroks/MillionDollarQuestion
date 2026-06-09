@@ -351,6 +351,7 @@ function handleAction(type, payload) {
       break;
 
     case 'set_audience_votes':
+      state.lifelines.audience = true;
       state.audience.votes = payload.votes;
       state.audience.visible = true;
       break;

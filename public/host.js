@@ -5,6 +5,14 @@ let editorWorkingQuestions = null; // local copy while editing
 
 function $(id) { return document.getElementById(id); }
 
+// Flip a lifeline card's status badge between Available and Used.
+function setLifelineCard(suffix, isUsed) {
+  const badge = $('status' + suffix);
+  if (!badge) return;
+  badge.textContent = isUsed ? 'Used' : 'Available';
+  badge.classList.toggle('used', !!isUsed);
+}
+
 /* ---- Render ladder + current question status ---- */
 function render(s) {
   // Ladder
@@ -54,21 +62,24 @@ function render(s) {
   $('btnRevealAll').disabled = s.answersRevealed >= 4;
   $('btnLock').disabled = s.selectedAnswer === null || s.lockedAnswer !== null || s.resultRevealed;
   $('btnResult').disabled = s.lockedAnswer === null || s.resultRevealed;
-  $('btn5050').disabled = s.lifelines.fifty;
-  $('btnPhone').disabled = s.lifelines.phone;
-  $('btnAudience').disabled = s.lifelines.audience;
+  // Lifeline cards: disable the "use" action once spent, and flip the badge.
+  const used = s.lifelines;
+  setLifelineCard('5050', used.fifty);
+  setLifelineCard('Phone', used.phone);
+  setLifelineCard('Audience', used.audience);
+  $('btn5050').disabled = used.fifty;
+  $('btnPhone').disabled = used.phone;
+  $('btnPhoneStop').disabled = !(s.phone && s.phone.active);
 
-  $('btn5050').style.opacity = s.lifelines.fifty ? 0.4 : 1;
-  $('btnPhone').style.opacity = s.lifelines.phone ? 0.4 : 1;
-  $('btnAudience').style.opacity = s.lifelines.audience ? 0.4 : 1;
-
-  // Live phone-vote panel
+  // Ask the Audience: all three start methods are locked once it's been used.
   const vOpen = s.vote && s.vote.open;
+  $('btnAudAuto').disabled = used.audience;
+  $('btnAudApply').disabled = used.audience;
+  $('btnOpenVote').disabled = used.audience || vOpen; // can't reopen once spent
+  $('btnCloseVote').disabled = !vOpen;                // only while voting is open
   $('voteStatus').textContent = vOpen ? 'OPEN' : 'closed';
-  $('voteStatus').style.color = vOpen ? 'var(--green)' : '#9fb4e8';
+  $('voteStatus').style.color = vOpen ? 'var(--green)' : '#9fc7b3';
   $('voteTotal').textContent = s.voteTotal || 0;
-  $('btnOpenVote').disabled = vOpen;
-  $('btnCloseVote').disabled = !vOpen;
 
   const counts = s.voteCounts || [0, 0, 0, 0];
   const total = s.voteTotal || 0;
@@ -82,7 +93,7 @@ function render(s) {
     tally.appendChild(row);
   }
   if (!$('voteUrl').dataset.set) {
-    $('voteUrl').innerHTML = `Audience opens: <b>${location.origin}/vote</b> on their phones (same Wi‑Fi).`;
+    $('voteUrl').textContent = `${location.origin}/vote`;
     $('voteUrl').dataset.set = '1';
   }
 
@@ -113,9 +124,8 @@ function wire() {
   $('btn5050').onclick = () => { Sound.play('lifeline'); Game.action('use_fifty'); };
   $('btnPhone').onclick = () => { Sound.play('lifeline'); Game.action('use_phone', { duration: 30 }); };
   $('btnPhoneStop').onclick = () => Game.action('stop_phone');
-  $('btnAudience').onclick = () => { Sound.play('lifeline'); Game.action('use_audience'); };
   $('btnAudApply').onclick = applyAudience;
-  $('btnAudAuto').onclick = () => Game.action('use_audience'); // server auto-generates
+  $('btnAudAuto').onclick = () => { Sound.play('lifeline'); Game.action('use_audience'); }; // server auto-generates
   $('btnAudHide').onclick = () => Game.action('hide_audience');
 
   // Live phone voting

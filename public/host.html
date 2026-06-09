@@ -74,6 +74,20 @@
     .audience-edit { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
     .audience-edit input { width:64px; }
 
+    /* Lifeline cards */
+    .lifeline-cards { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+    .lifeline-card { background:#0a3522; border:1px solid #1c6b46; border-radius:10px; padding:12px 14px; }
+    .lifeline-card.wide { grid-column:1 / -1; }
+    .lc-head { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+    .lc-title { font-weight:800; color:var(--gold); font-size:16px; letter-spacing:.5px; }
+    .lc-status { font-size:11px; text-transform:uppercase; letter-spacing:1px; padding:2px 9px; border-radius:10px; background:rgba(22,193,114,0.18); color:#56e6a0; border:1px solid rgba(22,193,114,0.45); white-space:nowrap; }
+    .lc-status.used { background:rgba(224,65,79,0.16); color:#ff8a93; border-color:rgba(224,65,79,0.45); }
+    .lc-desc { font-size:12px; color:#9fc7b3; margin:6px 0 10px; line-height:1.45; }
+    .lc-action { width:100%; }
+    .aud-mode { border-top:1px dashed #1c6b46; padding-top:10px; margin-top:12px; }
+    .aud-mode-label { font-weight:700; color:#dff0e7; font-size:13px; margin-bottom:6px; }
+    .tag-rec { font-size:10px; background:var(--gold); color:#241a00; padding:1px 7px; border-radius:8px; margin-left:6px; text-transform:uppercase; letter-spacing:.5px; vertical-align:middle; }
+
     .vote-tally { display:flex; flex-direction:column; gap:6px; }
     .vote-tally .vrow { display:flex; align-items:center; gap:8px; font-size:13px; }
     .vote-tally .vrow .vl { width:16px; color:var(--gold); font-weight:700; }
@@ -131,39 +145,78 @@
 
       <div class="panel" style="margin-top:14px;">
         <h2>Lifelines</h2>
-        <div class="ll-row">
-          <button id="btn5050" class="ll-btn"><b>50:50</b><span class="small">remove 2</span></button>
-          <div class="ll-btn">
-            <button id="btnPhone"><b>☎ Phone</b></button>
-            <div class="row" style="margin-top:4px;">
-              <button id="btnPhoneStop" class="ghost small">stop</button>
-              <span class="small">30s timer</span>
-            </div>
-          </div>
-          <div class="ll-btn">
-            <button id="btnAudience"><b>👥 Audience</b></button>
-            <div class="audience-edit" id="audienceEdit" style="margin-top:6px;">
-              <span class="small">A</span><input type="text" id="audA" value="25" />
-              <span class="small">B</span><input type="text" id="audB" value="25" />
-              <span class="small">C</span><input type="text" id="audC" value="25" />
-              <span class="small">D</span><input type="text" id="audD" value="25" />
-              <button id="btnAudApply" class="small">apply</button>
-              <button id="btnAudAuto" class="small">auto</button>
-              <button id="btnAudHide" class="ghost small">hide</button>
-            </div>
-          </div>
-        </div>
+        <p class="small" style="margin:-4px 0 12px;">Each lifeline can be used once per game. Using one shows it on the contestant screen and crosses it off.</p>
 
-        <div class="divider"></div>
-        <h2 style="margin-bottom:6px;">📱 Live audience vote (phones)</h2>
-        <div class="row">
-          <button id="btnOpenVote" class="green"><b>Open Live Vote</b></button>
-          <button id="btnCloseVote" class="gold">Close &amp; Lock</button>
-          <button id="btnResetVote" class="ghost small">clear votes</button>
-          <span class="small">Status: <b id="voteStatus">closed</b> · <b id="voteTotal">0</b> votes</span>
+        <div class="lifeline-cards">
+
+          <!-- 50:50 -->
+          <div class="lifeline-card">
+            <div class="lc-head">
+              <span class="lc-title">50 : 50</span>
+              <span class="lc-status" id="status5050">Available</span>
+            </div>
+            <p class="lc-desc">Removes two of the wrong answers from both screens.</p>
+            <button id="btn5050" class="gold lc-action">Use 50:50</button>
+          </div>
+
+          <!-- Phone a Friend -->
+          <div class="lifeline-card">
+            <div class="lc-head">
+              <span class="lc-title">☎ Phone a Friend</span>
+              <span class="lc-status" id="statusPhone">Available</span>
+            </div>
+            <p class="lc-desc">Puts a 30-second countdown on the contestant screen.</p>
+            <div class="row" style="margin-top:0;">
+              <button id="btnPhone" class="gold">Start 30s Timer</button>
+              <button id="btnPhoneStop" class="ghost">Stop Timer</button>
+            </div>
+          </div>
+
+          <!-- Ask the Audience -->
+          <div class="lifeline-card wide">
+            <div class="lc-head">
+              <span class="lc-title">👥 Ask the Audience</span>
+              <span class="lc-status" id="statusAudience">Available</span>
+            </div>
+            <p class="lc-desc">Shows a bar chart of the audience vote on the contestant screen. Choose <b>one</b> of these three ways to run it:</p>
+
+            <div class="aud-mode">
+              <div class="aud-mode-label">① Live phone vote <span class="tag-rec">recommended</span></div>
+              <p class="lc-desc" style="margin:0 0 8px;">The audience votes from their phones at <b id="voteUrl">…</b></p>
+              <div class="row" style="margin-top:0;">
+                <button id="btnOpenVote" class="green">Open Voting</button>
+                <button id="btnCloseVote" class="gold">Close &amp; Lock Result</button>
+                <button id="btnResetVote" class="ghost small">clear votes</button>
+                <span class="small">Voting is <b id="voteStatus">closed</b> · <b id="voteTotal">0</b> votes in</span>
+              </div>
+              <div class="vote-tally" id="voteTally" style="margin-top:10px;"></div>
+            </div>
+
+            <div class="aud-mode">
+              <div class="aud-mode-label">② Auto-generate</div>
+              <div class="row" style="margin-top:0;">
+                <button id="btnAudAuto" class="ghost">Show Realistic Numbers</button>
+                <span class="small">Instantly fills the chart with believable percentages.</span>
+              </div>
+            </div>
+
+            <div class="aud-mode">
+              <div class="aud-mode-label">③ Enter the numbers yourself</div>
+              <div class="audience-edit">
+                <span class="small">A</span><input type="text" id="audA" value="25" />
+                <span class="small">B</span><input type="text" id="audB" value="25" />
+                <span class="small">C</span><input type="text" id="audC" value="25" />
+                <span class="small">D</span><input type="text" id="audD" value="25" />
+                <button id="btnAudApply" class="ghost">Show These %</button>
+              </div>
+            </div>
+
+            <div class="row">
+              <button id="btnAudHide" class="ghost small">Hide chart from contestant screen</button>
+            </div>
+          </div>
+
         </div>
-        <div class="vote-tally" id="voteTally" style="margin-top:10px;"></div>
-        <div class="small" id="voteUrl" style="margin-top:8px;"></div>
       </div>
 
       <div class="panel" style="margin-top:14px;">
