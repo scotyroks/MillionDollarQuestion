@@ -66,14 +66,21 @@ function renderQuestion(s) {
 
   ans.innerHTML = '';
   if (!q) return;
+  const revealed = s.revealStage === 'revealed';
   q.a.forEach((text, i) => {
     const div = document.createElement('div');
     div.className = 'answer';
     if (i >= s.answersRevealed) div.classList.add('hidden-answer');
     if (s.removedAnswers.includes(i)) div.classList.add('removed');
-    if (s.resultRevealed && i === q.correct) div.classList.add('correct');
-    else if (s.lockedAnswer === i) div.classList.add('locked');
-    else if (s.selectedAnswer === i) div.classList.add('selected');
+    if (revealed && i === q.correct) {
+      div.classList.add('correct');                   // green flash → stays green
+    } else if (revealed && s.lockedAnswer === i) {
+      div.classList.add('wrong');                      // locked-in but wrong → red flash
+    } else if (s.lockedAnswer === i) {
+      div.classList.add('locked');                     // suspense: holds orange
+    } else if (s.selectedAnswer === i) {
+      div.classList.add('selected');
+    }
     div.innerHTML = `<span class="letter">${LETTERS[i]}:</span><span class="text">${escapeHtml(text)}</span>`;
     ans.appendChild(div);
   });
@@ -139,10 +146,14 @@ function cues(s) {
   // Play sounds based on transitions from previous state.
   if ((s.answersRevealed || 0) > (prev.answersRevealed || 0)) Sound.play('reveal');
   if (s.lockedAnswer !== null && prev.lockedAnswer === null) Sound.play('lock');
-  if (s.resultRevealed && !prev.resultRevealed && s.banner) {
-    if (s.banner.kind === 'win') Sound.play('win');
-    else if (s.banner.kind === 'correct') Sound.play('correct');
-    else if (s.banner.kind === 'lose') Sound.play('wrong');
+  // Entering the suspense pause after "Reveal Answer".
+  if (s.revealStage === 'suspense' && prev.revealStage !== 'suspense') Sound.play('suspense');
+  // Colours flash in: green for correct, red buzzer for wrong.
+  if (s.revealStage === 'revealed' && prev.revealStage !== 'revealed') {
+    const q = s.questions[s.questionIndex];
+    const isFinal = s.questionIndex === s.questions.length - 1;
+    if (s.lockedAnswer === q.correct) Sound.play(isFinal ? 'win' : 'correct');
+    else Sound.play('wrong');
   }
   const ll = s.lifelines, pll = prev.lifelines || {};
   if ((ll.fifty && !pll.fifty) || (ll.phone && !pll.phone) || (ll.audience && !pll.audience)) Sound.play('lifeline');

@@ -85,6 +85,11 @@ const Sound = {
       case 'tick':
         this.tone(1000, 0, 0.05, 'square', 0.08);
         break;
+      case 'suspense': // low rising drone during the reveal pause
+        this.tone(70, 0, 2.4, 'sawtooth', 0.16);
+        this.tone(105, 0, 2.4, 'sine', 0.12);
+        this.tone(140, 1.2, 1.2, 'triangle', 0.08);
+        break;
     }
   },
 };

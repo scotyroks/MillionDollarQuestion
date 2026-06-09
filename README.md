@@ -46,7 +46,10 @@ and WebP all work — keep the name `logo.png`.)
 - **Reveal Question** → **Reveal Answers** — stage the dramatic reveal.
 - **Click an answer** — highlights it orange as the contestant's choice.
 - **🔒 Lock In** — locks the choice (pulsing) with a suspense sound.
-- **Reveal Answer** — flips it green if correct, and shows a win/lose overlay.
+- **Reveal Answer** — builds suspense: a dramatic pause, then the answer
+  flashes **green** if correct (and stays green) or **red** for a few seconds
+  if wrong before the Game Over screen drops. The final question shows the big
+  win banner.
 - **Walk Away** — the contestant takes their guaranteed money.
 - **Next ▶ / ◀ Prev** — move through the prize ladder.
 - **Reset** — start over from $100.

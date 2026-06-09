@@ -60,8 +60,9 @@ function render(s) {
     ? 'All Answers Shown'
     : `Reveal Answer ${LETTERS[s.answersRevealed]} (${s.answersRevealed}/4)`;
   $('btnRevealAll').disabled = s.answersRevealed >= 4;
-  $('btnLock').disabled = s.selectedAnswer === null || s.lockedAnswer !== null || s.resultRevealed;
-  $('btnResult').disabled = s.lockedAnswer === null || s.resultRevealed;
+  $('btnLock').disabled = s.selectedAnswer === null || s.lockedAnswer !== null || s.revealStage !== 'none';
+  $('btnResult').disabled = s.lockedAnswer === null || s.revealStage !== 'none';
+  $('btnResult').textContent = s.revealStage === 'suspense' ? 'Revealing…' : 'Reveal Answer';
   // Lifeline cards: disable the "use" action once spent, and flip the badge.
   const used = s.lifelines;
   setLifelineCard('5050', used.fifty);

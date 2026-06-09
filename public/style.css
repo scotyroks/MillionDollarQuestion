@@ -119,11 +119,26 @@ html, body {
   background: linear-gradient(180deg, #3cf08e 0%, var(--emerald-bright) 55%, #0a7a48 100%) !important;
   border-color: #d6ffe8 !important;
   box-shadow: 0 0 34px rgba(22,193,114,0.85) !important;
-  animation: pop 0.45s ease;
+  animation: flashGreen 0.4s ease-in-out 4;
 }
 .answer.correct .letter, .answer.correct .text { color: #03220f !important; }
+.answer.wrong {
+  background: linear-gradient(180deg, #ff5d6a 0%, var(--red) 55%, #8a1820 100%) !important;
+  border-color: #ffd2d6 !important;
+  box-shadow: 0 0 34px rgba(224,65,79,0.9) !important;
+  animation: flashRed 0.4s ease-in-out 5;
+}
+.answer.wrong .letter, .answer.wrong .text { color: #2a0508 !important; }
 @keyframes pulse { from { box-shadow: 0 0 8px rgba(244,196,48,0.4);} to { box-shadow: 0 0 34px rgba(255,224,122,0.95);} }
 @keyframes pop { 0%{transform:scale(1);} 50%{transform:scale(1.06);} 100%{transform:scale(1);} }
+@keyframes flashGreen {
+  0%, 100% { filter: brightness(1); box-shadow: 0 0 34px rgba(22,193,114,0.85); }
+  50% { filter: brightness(1.9); box-shadow: 0 0 48px rgba(22,193,114,1); }
+}
+@keyframes flashRed {
+  0%, 100% { filter: brightness(0.85); box-shadow: 0 0 18px rgba(224,65,79,0.5); }
+  50% { filter: brightness(1.7); box-shadow: 0 0 48px rgba(224,65,79,1); }
+}
 
 /* ===== Question panel ===== */
 .question-box {

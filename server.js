@@ -95,6 +95,7 @@ function freshPerQuestion() {
     selectedAnswer: null, // host highlight (orange), letter index 0-3
     lockedAnswer: null,   // locked in (pulsing), letter index 0-3
     resultRevealed: false,
+    revealStage: 'none',  // 'none' | 'suspense' | 'revealed' — drives the dramatic reveal
     removedAnswers: [],   // 50:50 removed option indexes
     audience: { visible: false, votes: [0, 0, 0, 0] },
     phone: { active: false, endsAt: null, duration: 30 },
@@ -178,9 +179,36 @@ function broadcast() {
   }
 }
 
+// ---- Dramatic reveal timing ------------------------------------------------
+// reveal_result plays out over a few stages on timers. A token lets any new
+// reveal or question change cancel pending steps so stale ones never fire.
+const SUSPENSE_MS = 2500; // pause after "Reveal Answer" before colours show
+const WRONG_HOLD_MS = 3200; // red flash time before the Game Over screen
+let revealToken = 0;
+let revealTimers = [];
+
+function cancelReveal() {
+  revealToken++;
+  revealTimers.forEach(clearTimeout);
+  revealTimers = [];
+}
+
+function laterReveal(token, ms, fn) {
+  revealTimers.push(setTimeout(() => {
+    if (token !== revealToken) return; // superseded
+    fn();
+    broadcast();
+  }, ms));
+}
+
 // ---- Actions ---------------------------------------------------------------
 
 function handleAction(type, payload) {
+  // Any of these navigations should cancel a reveal that's mid-animation.
+  if (['start_game', 'reset_game', 'goto_question', 'next_question',
+       'prev_question', 'skip_player', 'walk_away'].includes(type)) {
+    cancelReveal();
+  }
   switch (type) {
     case 'start_game':
       state = freshGame();
@@ -256,6 +284,7 @@ function handleAction(type, payload) {
       state.selectedAnswer = null;
       state.lockedAnswer = null;
       state.resultRevealed = false;
+      state.revealStage = 'none';
       state.banner = null;
       state.phase = 'playing';
       break;
@@ -286,20 +315,39 @@ function handleAction(type, payload) {
       break;
 
     case 'reveal_result': {
-      if (state.lockedAnswer === null) break;
-      state.resultRevealed = true;
-      const correctIdx = questions[state.questionIndex].correct;
-      if (state.lockedAnswer === correctIdx) {
-        const isFinal = state.questionIndex === questions.length - 1;
-        state.banner = {
-          kind: isFinal ? 'win' : 'correct',
-          amount: LADDER[state.questionIndex],
-        };
-        if (isFinal) state.phase = 'won';
-      } else {
-        state.phase = 'lost';
-        state.banner = { kind: 'lose', amount: guaranteedAmount(state.questionIndex) };
+      if (state.lockedAnswer === null || state.revealStage !== 'none') break;
+      cancelReveal();
+      const token = revealToken;
+      const qIdx = state.questionIndex;
+      const isCorrect = state.lockedAnswer === questions[qIdx].correct;
+      const isFinal = qIdx === questions.length - 1;
+
+      // Stage 1 — suspense: locked answer holds, no colours yet.
+      state.revealStage = 'suspense';
+      state.resultRevealed = false;
+      state.banner = null;
+
+      // Stage 2 — after a pause, reveal colours (green correct / red wrong).
+      laterReveal(token, SUSPENSE_MS, () => {
+        state.revealStage = 'revealed';
+        state.resultRevealed = true;
+      });
+
+      // Stage 3 — the outcome screen.
+      if (isCorrect && isFinal) {
+        // Big win banner shortly after the green flash.
+        laterReveal(token, SUSPENSE_MS + 1200, () => {
+          state.phase = 'won';
+          state.banner = { kind: 'win', amount: LADDER[qIdx] };
+        });
+      } else if (!isCorrect) {
+        // Hold the red flash, then drop the Game Over screen.
+        laterReveal(token, SUSPENSE_MS + WRONG_HOLD_MS, () => {
+          state.phase = 'lost';
+          state.banner = { kind: 'lose', amount: guaranteedAmount(qIdx) };
+        });
       }
+      // Non-final correct answers just stay green — host advances with Next.
       break;
     }
 
