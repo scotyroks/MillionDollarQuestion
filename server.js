@@ -88,7 +88,7 @@ let questions = loadQuestions();
 function freshPerQuestion() {
   return {
     questionVisible: false,
-    answersRevealed: false,
+    answersRevealed: 0,   // how many answers (0-4) are shown on the big screen
     selectedAnswer: null, // host highlight (orange), letter index 0-3
     lockedAnswer: null,   // locked in (pulsing), letter index 0-3
     resultRevealed: false,
@@ -215,9 +215,14 @@ function handleAction(type, payload) {
       state.questionVisible = true;
       break;
 
-    case 'reveal_answers':
+    case 'reveal_answers': // reveal the next answer
       state.questionVisible = true;
-      state.answersRevealed = true;
+      if (state.answersRevealed < 4) state.answersRevealed++;
+      break;
+
+    case 'reveal_all_answers':
+      state.questionVisible = true;
+      state.answersRevealed = 4;
       break;
 
     case 'select_answer':

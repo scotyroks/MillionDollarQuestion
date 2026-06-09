@@ -32,10 +32,13 @@ function render(s) {
     q.a.forEach((text, i) => {
       const div = document.createElement('div');
       div.className = 'host-ans';
-      if (i === q.correct) div.classList.add('is-correct');
+      // Hide the correct answer from the host until a choice has been locked in.
+      if (s.lockedAnswer !== null && i === q.correct) div.classList.add('is-correct');
       if (s.lockedAnswer === i) div.classList.add('lock');
       else if (s.selectedAnswer === i) div.classList.add('sel');
       if (s.removedAnswers.includes(i)) div.style.opacity = '0.4';
+      // Dim answers the room can't see yet so the host knows what's on screen.
+      else if (i >= s.answersRevealed) { div.style.opacity = '0.5'; div.classList.add('not-shown'); }
       div.innerHTML = `<span class="letter">${LETTERS[i]}</span><span>${escapeHtml(text)}</span>`;
       div.onclick = () => { Sound.play('reveal'); Game.action('select_answer', { index: i }); };
       ha.appendChild(div);
@@ -44,7 +47,11 @@ function render(s) {
 
   // Button states
   $('btnRevealQ').disabled = s.questionVisible;
-  $('btnRevealA').disabled = s.answersRevealed;
+  $('btnRevealA').disabled = s.answersRevealed >= 4;
+  $('btnRevealA').textContent = s.answersRevealed >= 4
+    ? 'All Answers Shown'
+    : `Reveal Answer ${LETTERS[s.answersRevealed]} (${s.answersRevealed}/4)`;
+  $('btnRevealAll').disabled = s.answersRevealed >= 4;
   $('btnLock').disabled = s.selectedAnswer === null || s.lockedAnswer !== null || s.resultRevealed;
   $('btnResult').disabled = s.lockedAnswer === null || s.resultRevealed;
   $('btn5050').disabled = s.lifelines.fifty;
@@ -93,6 +100,7 @@ function wire() {
   $('btnNext').onclick = () => Game.action('next_question');
   $('btnRevealQ').onclick = () => Game.action('reveal_question');
   $('btnRevealA').onclick = () => { Sound.play('reveal'); Game.action('reveal_answers'); };
+  $('btnRevealAll').onclick = () => { Sound.play('reveal'); Game.action('reveal_all_answers'); };
   $('btnLock').onclick = () => { Sound.play('lock'); Game.action('lock_answer'); };
   $('btnResult').onclick = () => Game.action('reveal_result');
   $('btnWalk').onclick = () => { if (confirm('Walk away with the guaranteed amount?')) Game.action('walk_away'); };

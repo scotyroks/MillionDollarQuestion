@@ -53,7 +53,7 @@ function renderQuestion(s) {
   q.a.forEach((text, i) => {
     const div = document.createElement('div');
     div.className = 'answer';
-    if (!s.answersRevealed) div.classList.add('hidden-answer');
+    if (i >= s.answersRevealed) div.classList.add('hidden-answer');
     if (s.removedAnswers.includes(i)) div.classList.add('removed');
     if (s.resultRevealed && i === q.correct) div.classList.add('correct');
     else if (s.lockedAnswer === i) div.classList.add('locked');
@@ -121,7 +121,7 @@ function renderBanner(s) {
 
 function cues(s) {
   // Play sounds based on transitions from previous state.
-  if (s.answersRevealed && !prev.answersRevealed) Sound.play('reveal');
+  if ((s.answersRevealed || 0) > (prev.answersRevealed || 0)) Sound.play('reveal');
   if (s.lockedAnswer !== null && prev.lockedAnswer === null) Sound.play('lock');
   if (s.resultRevealed && !prev.resultRevealed && s.banner) {
     if (s.banner.kind === 'win') Sound.play('win');
