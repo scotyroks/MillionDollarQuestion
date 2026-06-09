@@ -133,8 +133,9 @@ function cues(s) {
 }
 
 function render(s) {
-  document.getElementById('intro').style.display = s.phase === 'idle' ? 'block' : 'none';
+  document.getElementById('intro').style.display = s.phase === 'idle' ? 'flex' : 'none';
   document.getElementById('playArea').style.display = s.phase === 'idle' ? 'none' : 'flex';
+  document.getElementById('cornerLogo').style.display = s.phase === 'idle' ? 'none' : 'block';
 
   renderLadder(s);
   renderLifelines(s);

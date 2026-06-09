@@ -1,16 +1,20 @@
-/* ===== Who Wants to Be a Millionaire — shared theme ===== */
+/* ===== Million Dollar Question — gold / emerald / black theme ===== */
 :root {
-  --bg-deep: #02030f;
-  --bg-mid: #071a4a;
-  --blue: #0a2a7a;
-  --blue-light: #1e4fd0;
+  --bg-deep: #000000;
+  --bg-mid: #03110b;
+  --emerald-deep: #052a1b;
+  --emerald: #0d7a4a;
+  --emerald-bright: #16c172;
   --gold: #f4c430;
-  --gold-soft: #e8b923;
+  --gold-bright: #ffe07a;
+  --gold-soft: #d4af37;
+  --gold-deep: #9a7414;
+  --amber: #ffb13d;
   --orange: #ff8c00;
-  --green: #1db954;
-  --red: #e03131;
+  --green: #16c172;
+  --red: #e0414f;
   --text: #ffffff;
-  --rim: #6f8bd8;
+  --rim: #d4af37;
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -20,10 +24,26 @@ html, body {
   font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
   color: var(--text);
   background:
-    radial-gradient(ellipse at 50% 18%, #133a8c 0%, #061238 45%, var(--bg-deep) 100%);
+    radial-gradient(ellipse at 50% 32%, #0a3b26 0%, #04190f 42%, var(--bg-deep) 78%);
   background-attachment: fixed;
   overflow-x: hidden;
 }
+
+/* Green sunburst rays — reused behind the logo and the stage */
+.sunburst {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    repeating-conic-gradient(from 0deg at 50% 50%,
+      rgba(22,193,114,0.16) 0deg 4deg,
+      rgba(4,25,15,0) 4deg 8deg);
+  -webkit-mask-image: radial-gradient(circle at 50% 50%, #000 8%, transparent 62%);
+  mask-image: radial-gradient(circle at 50% 50%, #000 8%, transparent 62%);
+  animation: spin 90s linear infinite;
+  z-index: 0;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
 
 /* ===== Money ladder ===== */
 .ladder {
@@ -36,99 +56,104 @@ html, body {
   align-items: center;
   gap: 10px;
   padding: 5px 14px;
-  margin: 2px 0;
+  margin: 3px 0;
   border-radius: 22px;
   font-weight: 600;
   letter-spacing: 0.5px;
   color: var(--gold);
   font-size: clamp(13px, 1.4vw, 18px);
+  border: 1px solid transparent;
   transition: all 0.25s ease;
 }
-.ladder li .num { width: 28px; text-align: right; opacity: 0.7; color: #cdd9ff; font-size: 0.8em; }
+.ladder li .num { width: 28px; text-align: right; opacity: 0.65; color: #8fd9b4; font-size: 0.8em; }
 .ladder li .amt { flex: 1; }
-.ladder li.safe { color: #fff; }
+.ladder li.safe { color: #fff; border-color: rgba(212,175,55,0.35); }
 .ladder li.current {
-  background: linear-gradient(90deg, #b8860b, var(--gold));
+  background: linear-gradient(90deg, var(--gold-deep), var(--gold), var(--gold-bright));
   color: #1a1200;
-  box-shadow: 0 0 22px rgba(244,196,48,0.7);
-  transform: scale(1.04);
+  box-shadow: 0 0 24px rgba(244,196,48,0.75);
+  transform: scale(1.05);
+  text-shadow: 0 1px 0 rgba(255,255,255,0.3);
 }
 .ladder li.current .num { color: #4a3500; opacity: 0.9; }
-.ladder li.passed { color: #fff; opacity: 0.85; }
+.ladder li.passed { color: #56e6a0; opacity: 0.9; }
 
 /* ===== Answer lozenges (hexagonal millionaire shape) ===== */
 .answers {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 14px 26px;
+  gap: 16px 28px;
 }
 .answer {
   position: relative;
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 14px 22px;
-  min-height: 58px;
+  padding: 14px 26px;
+  min-height: 60px;
   cursor: default;
   clip-path: polygon(4% 0, 96% 0, 100% 50%, 96% 100%, 4% 100%, 0 50%);
-  background: linear-gradient(180deg, #061b52 0%, #02103a 100%);
+  background: linear-gradient(180deg, #0a3522 0%, #03160e 100%);
   border: 2px solid var(--rim);
+  box-shadow: 0 0 14px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.06);
   font-size: clamp(15px, 1.8vw, 24px);
-  transition: background 0.3s, color 0.3s, opacity 0.3s;
+  transition: background 0.3s, color 0.3s, opacity 0.3s, box-shadow 0.3s;
 }
-.answer .letter { color: var(--gold); font-weight: 700; min-width: 1.4em; }
+.answer .letter { color: var(--gold); font-weight: 800; min-width: 1.4em; text-shadow: 0 1px 2px rgba(0,0,0,0.6); }
 .answer .text { color: #fff; }
 .answer.hidden-answer { visibility: hidden; }
-.answer.removed { opacity: 0.18; }
+.answer.removed { opacity: 0.16; }
 .answer.removed .text, .answer.removed .letter { visibility: hidden; }
 .answer.selected {
-  background: linear-gradient(180deg, #ffb13d 0%, var(--orange) 100%);
-  border-color: #ffd98a;
+  background: linear-gradient(180deg, var(--gold-bright) 0%, var(--gold) 60%, var(--gold-deep) 100%);
+  border-color: #fff5cc;
 }
-.answer.selected .letter, .answer.selected .text { color: #2a1500; }
+.answer.selected .letter, .answer.selected .text { color: #2a1d00; }
 .answer.locked {
-  background: linear-gradient(180deg, #ffb13d 0%, var(--orange) 100%);
+  background: linear-gradient(180deg, var(--gold-bright) 0%, var(--gold) 60%, var(--gold-deep) 100%);
   border-color: #fff;
   animation: pulse 0.8s ease-in-out infinite alternate;
 }
-.answer.locked .letter, .answer.locked .text { color: #2a1500; }
+.answer.locked .letter, .answer.locked .text { color: #2a1d00; }
 .answer.correct {
-  background: linear-gradient(180deg, #2ee06a 0%, var(--green) 100%) !important;
-  border-color: #aaffcc !important;
-  animation: pop 0.4s ease;
+  background: linear-gradient(180deg, #3cf08e 0%, var(--emerald-bright) 55%, #0a7a48 100%) !important;
+  border-color: #d6ffe8 !important;
+  box-shadow: 0 0 34px rgba(22,193,114,0.85) !important;
+  animation: pop 0.45s ease;
 }
 .answer.correct .letter, .answer.correct .text { color: #03220f !important; }
-@keyframes pulse { from { box-shadow: 0 0 6px rgba(255,140,0,0.4);} to { box-shadow: 0 0 30px rgba(255,179,61,0.95);} }
-@keyframes pop { 0%{transform:scale(1);} 50%{transform:scale(1.05);} 100%{transform:scale(1);} }
+@keyframes pulse { from { box-shadow: 0 0 8px rgba(244,196,48,0.4);} to { box-shadow: 0 0 34px rgba(255,224,122,0.95);} }
+@keyframes pop { 0%{transform:scale(1);} 50%{transform:scale(1.06);} 100%{transform:scale(1);} }
 
 /* ===== Question panel ===== */
 .question-box {
   position: relative;
   margin-top: auto;
-  padding: 22px 30px;
+  padding: 24px 34px;
   border-radius: 14px;
-  background: linear-gradient(180deg, #061b52 0%, #02103a 100%);
+  background: linear-gradient(180deg, #0a3522 0%, #03160e 100%);
   border: 2px solid var(--rim);
   text-align: center;
   font-size: clamp(17px, 2.1vw, 28px);
-  min-height: 90px;
+  min-height: 92px;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 0 40px rgba(10,40,120,0.5) inset;
+  box-shadow: 0 0 44px rgba(13,122,74,0.35) inset, 0 6px 24px rgba(0,0,0,0.5);
 }
 
 /* ===== Lifelines ===== */
 .lifelines { display: flex; gap: 16px; }
 .lifeline {
   position: relative;
-  width: 64px; height: 44px;
+  width: 66px; height: 46px;
   border-radius: 50%/60%;
   border: 2px solid var(--gold-soft);
-  background: radial-gradient(circle at 50% 35%, #1e4fd0, #061238);
+  background: radial-gradient(circle at 50% 32%, var(--emerald) 0%, #042417 80%);
   display: flex; align-items: center; justify-content: center;
-  font-weight: 700; font-size: 14px; color: var(--gold);
+  font-weight: 800; font-size: 14px; color: var(--gold);
   letter-spacing: 0.5px;
+  box-shadow: 0 0 12px rgba(212,175,55,0.25);
 }
 .lifeline.used::after {
   content: ''; position: absolute; inset: -2px;
@@ -136,29 +161,47 @@ html, body {
               linear-gradient(-45deg, transparent 44%, var(--red) 46%, var(--red) 54%, transparent 56%);
   border-radius: inherit;
 }
-.lifeline.used { opacity: 0.55; }
+.lifeline.used { opacity: 0.5; }
 
 /* ===== Banner overlay ===== */
 .banner {
   position: fixed; inset: 0;
   display: none; align-items: center; justify-content: center;
   flex-direction: column; gap: 10px;
-  background: rgba(2,3,15,0.86); z-index: 50; text-align: center;
+  background: rgba(0,0,0,0.9); z-index: 50; text-align: center;
 }
 .banner.show { display: flex; animation: fade 0.4s ease; }
-.banner h1 { font-size: clamp(30px, 6vw, 80px); }
-.banner .amount { font-size: clamp(40px, 9vw, 120px); color: var(--gold); text-shadow: 0 0 30px rgba(244,196,48,0.7); }
-.banner.win h1 { color: var(--gold); }
+.banner h1 { font-size: clamp(30px, 6vw, 80px); letter-spacing: 2px; }
+.banner .amount { font-size: clamp(40px, 9vw, 120px); color: var(--gold); text-shadow: 0 0 36px rgba(244,196,48,0.8); }
+.banner.win h1 { color: var(--gold); text-shadow: 0 0 40px rgba(244,196,48,0.7); }
 .banner.lose h1 { color: var(--red); }
-.banner.walk h1 { color: #7fd4ff; }
+.banner.walk h1 { color: var(--emerald-bright); }
 @keyframes fade { from { opacity: 0; } to { opacity: 1; } }
 
 /* Audience chart */
 .audience-chart { display: flex; gap: 18px; align-items: flex-end; height: 220px; }
 .audience-bar { width: 70px; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; }
-.audience-bar .bar { width: 100%; background: linear-gradient(180deg, var(--gold), var(--orange)); border-radius: 6px 6px 0 0; transition: height 0.6s cubic-bezier(.2,.8,.2,1); min-height: 2px; }
-.audience-bar .pct { margin-bottom: 6px; font-weight: 700; color: var(--gold); }
-.audience-bar .lbl { margin-top: 8px; font-weight: 700; color: #fff; }
+.audience-bar .bar { width: 100%; background: linear-gradient(180deg, var(--gold-bright), var(--gold), var(--gold-deep)); border-radius: 6px 6px 0 0; transition: height 0.6s cubic-bezier(.2,.8,.2,1); min-height: 2px; box-shadow: 0 0 16px rgba(244,196,48,0.4); }
+.audience-bar .pct { margin-bottom: 6px; font-weight: 800; color: var(--gold); }
+.audience-bar .lbl { margin-top: 8px; font-weight: 800; color: #fff; }
 
-.connection { position: fixed; top: 8px; right: 12px; font-size: 12px; color: #8aa0d8; z-index: 99; }
+.connection { position: fixed; top: 8px; right: 12px; font-size: 12px; color: #4f9c79; z-index: 99; }
 .connection.bad { color: var(--red); }
+
+/* ===== Brand logo (image with graceful text fallback) ===== */
+.brand-logo { display: inline-block; max-width: 100%; }
+.brand-logo img { display: block; max-width: 100%; height: auto; filter: drop-shadow(0 6px 30px rgba(0,0,0,0.8)); }
+.brand-logo .logo-fallback {
+  font-weight: 900; line-height: 0.96; letter-spacing: 1px; text-transform: uppercase;
+}
+.brand-logo .logo-fallback .l1, .brand-logo .logo-fallback .l2 {
+  color: var(--gold);
+  background: linear-gradient(180deg, #fff6cf 0%, var(--gold) 45%, var(--gold-deep) 100%);
+  -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+  text-shadow: 0 2px 10px rgba(0,0,0,0.4);
+}
+.brand-logo .logo-fallback .l3 {
+  color: var(--emerald-bright);
+  background: linear-gradient(180deg, #6effb0 0%, var(--emerald-bright) 45%, #0a7a48 100%);
+  -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+}

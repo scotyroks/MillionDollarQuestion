@@ -1,6 +1,6 @@
-# 💰 Who Wants to Be a Millionaire — Game Night
+# 💰 Million Dollar Question — Game Night
 
-A two-screen controller for hosting your own *Who Wants to Be a Millionaire* night.
+A two-screen controller for hosting your own *Million Dollar Question* trivia night.
 One screen faces the **host** (control panel), the other faces the **contestant /
 the room** (the big dramatic display). State syncs live between them.
 
@@ -31,6 +31,12 @@ the room** (the big dramatic display). State syncs live between them.
 > address shown in the terminal, not `localhost`, when opening on a second device.
 
 To use a different port: `PORT=8080 node server.js`.
+
+### Adding the logo
+Save your logo image as **`public/logo.png`** and it appears automatically on
+the intro screen, the corner during play, and the host panel. Until you add it,
+a styled gold-and-emerald text version of the title is shown instead. (PNG, JPG,
+and WebP all work — keep the name `logo.png`.)
 
 ---
 

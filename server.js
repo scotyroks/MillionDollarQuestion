@@ -387,6 +387,11 @@ const MIME = {
   '.json': 'application/json; charset=utf-8',
   '.svg': 'image/svg+xml',
   '.ico': 'image/x-icon',
+  '.png': 'image/png',
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.webp': 'image/webp',
+  '.gif': 'image/gif',
 };
 
 function serveFile(res, filePath) {
@@ -485,7 +490,7 @@ server.listen(PORT, () => {
       if (net.family === 'IPv4' && !net.internal) { lan = net.address; break; }
     }
   }
-  console.log('\n  Who Wants to Be a Millionaire — game night\n');
+  console.log('\n  Million Dollar Question — game night\n');
   console.log(`  Host screen     : http://${lan}:${PORT}/host`);
   console.log(`  Contestant view : http://${lan}:${PORT}/display`);
   console.log(`  Audience phones : http://${lan}:${PORT}/vote`);
