@@ -1,0 +1,13 @@
+{
+  "name": "million-dollar-question",
+  "version": "1.0.0",
+  "description": "Who Wants to Be a Millionaire — two-screen game night controller (host + contestant). Zero dependencies.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=16"
+  },
+  "license": "MIT"
+}

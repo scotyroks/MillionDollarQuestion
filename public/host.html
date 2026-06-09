@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Millionaire — Host Control</title>
+  <link rel="stylesheet" href="/style.css" />
+  <style>
+    body { overflow-y: auto; }
+    .host { display: grid; grid-template-columns: 200px 1fr; gap: 16px; max-width: 1280px; margin: 0 auto; padding: 16px; }
+    .panel { background: rgba(7,26,74,0.5); border: 1px solid #24407e; border-radius: 12px; padding: 14px; }
+    h2 { font-size: 14px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--gold); margin-bottom: 10px; }
+    .ladder li { font-size: 13px; padding: 4px 10px; }
+
+    .qstrip { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
+    .qstrip .meta { color: #9fb4e8; font-size: 13px; }
+    .qstrip .amt { color: var(--gold); font-weight: 700; }
+
+    .hostq { font-size: 20px; text-align: center; padding: 16px; background: linear-gradient(180deg,#061b52,#02103a); border:1px solid var(--rim); border-radius: 10px; margin-bottom: 14px; }
+
+    .host-answers { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+    .host-ans { display:flex; align-items:center; gap:10px; padding: 12px 16px; border:2px solid var(--rim); border-radius: 8px; cursor: pointer; background:#061b52; transition: all 0.15s; font-size: 16px; user-select:none; }
+    .host-ans:hover { border-color: var(--gold); }
+    .host-ans .letter { color: var(--gold); font-weight:700; }
+    .host-ans.is-correct { box-shadow: inset 0 0 0 2px var(--green); }
+    .host-ans.is-correct::after { content:'✓ correct'; margin-left:auto; color: var(--green); font-size: 12px; font-weight:700; }
+    .host-ans.sel { background: var(--orange); color:#2a1500; }
+    .host-ans.sel .letter { color:#2a1500; }
+    .host-ans.lock { background: var(--orange); color:#2a1500; outline: 2px solid #fff; }
+
+    .controls { display:flex; flex-wrap: wrap; gap: 8px; }
+    button { font-family: inherit; font-size: 14px; font-weight:600; padding: 9px 14px; border-radius: 8px; border:1px solid #2a4a96; background:#0e2f7a; color:#fff; cursor:pointer; transition: background .15s, transform .05s; }
+    button:hover { background:#1644b0; }
+    button:active { transform: translateY(1px); }
+    button:disabled { opacity:.4; cursor:not-allowed; }
+    button.gold { background: linear-gradient(180deg,#f4c430,#d6a800); color:#241a00; border-color:#ffe07a; }
+    button.green { background: var(--green); border-color:#7df0aa; }
+    button.red { background: var(--red); border-color:#ffb3b3; }
+    button.ghost { background: transparent; }
+
+    .row { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-top: 10px; }
+    .divider { height:1px; background:#24407e; margin:14px 0; }
+    .ll-row { display:flex; gap:10px; flex-wrap:wrap; }
+    .ll-btn { display:flex; flex-direction:column; align-items:center; gap:4px; min-width: 90px; }
+    .small { font-size: 12px; color:#9fb4e8; }
+
+    /* editor */
+    .editor { display:none; }
+    .editor.show { display:block; }
+    .q-list { max-height: 280px; overflow-y:auto; display:flex; flex-direction:column; gap:6px; margin-bottom:12px; }
+    .q-item { display:flex; align-items:center; gap:8px; padding:8px 10px; background:#061b52; border:1px solid #24407e; border-radius:6px; cursor:pointer; }
+    .q-item.active { border-color: var(--gold); }
+    .q-item .qt { flex:1; font-size:13px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .q-item .badge { font-size:11px; color:#9fb4e8; }
+    .form-row { display:flex; flex-direction:column; gap:6px; margin-bottom:8px; }
+    .form-row label { font-size:12px; color:#9fb4e8; }
+    input[type=text] { padding:8px 10px; border-radius:6px; border:1px solid #2a4a96; background:#03103a; color:#fff; font-family:inherit; font-size:14px; }
+    .ans-edit { display:grid; grid-template-columns: auto 1fr; gap:8px; align-items:center; }
+    .ans-edit input[type=radio] { width:18px; height:18px; }
+    .audience-edit { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+    .audience-edit input { width:64px; }
+  </style>
+</head>
+<body>
+  <div class="connection" id="conn">● connecting…</div>
+  <div class="host">
+    <!-- Ladder -->
+    <div class="panel">
+      <h2>Prize Ladder</h2>
+      <ul class="ladder" id="ladder"></ul>
+    </div>
+
+    <!-- Main control -->
+    <div>
+      <div class="panel">
+        <div class="qstrip">
+          <div>
+            <button id="btnPrev" class="ghost">◀ Prev</button>
+            <button id="btnNext" class="ghost">Next ▶</button>
+          </div>
+          <div class="meta">Question <span id="qNum">1</span> / <span id="qTotal">15</span> — <span class="amt" id="qAmt">$100</span></div>
+          <div>
+            <button id="btnStart" class="gold">Start Game</button>
+            <button id="btnReset" class="ghost">Reset</button>
+          </div>
+        </div>
+
+        <div class="hostq" id="hostQ">—</div>
+        <div class="host-answers" id="hostAnswers"></div>
+
+        <div class="controls">
+          <button id="btnRevealQ">Reveal Question</button>
+          <button id="btnRevealA">Reveal Answers</button>
+          <button id="btnLock" class="gold">🔒 Lock In</button>
+          <button id="btnResult" class="green">Reveal Answer</button>
+          <button id="btnWalk" class="red">Walk Away</button>
+          <button id="btnClearBanner" class="ghost">Clear Overlay</button>
+        </div>
+        <div class="small" style="margin-top:8px;">Tip: click an answer to highlight it (orange) as the contestant's pick, then <b>Lock In</b>, then <b>Reveal Answer</b>.</div>
+      </div>
+
+      <div class="panel" style="margin-top:14px;">
+        <h2>Lifelines</h2>
+        <div class="ll-row">
+          <button id="btn5050" class="ll-btn"><b>50:50</b><span class="small">remove 2</span></button>
+          <div class="ll-btn">
+            <button id="btnPhone"><b>☎ Phone</b></button>
+            <div class="row" style="margin-top:4px;">
+              <button id="btnPhoneStop" class="ghost small">stop</button>
+              <span class="small">30s timer</span>
+            </div>
+          </div>
+          <div class="ll-btn">
+            <button id="btnAudience"><b>👥 Audience</b></button>
+            <div class="audience-edit" id="audienceEdit" style="margin-top:6px;">
+              <span class="small">A</span><input type="text" id="audA" value="25" />
+              <span class="small">B</span><input type="text" id="audB" value="25" />
+              <span class="small">C</span><input type="text" id="audC" value="25" />
+              <span class="small">D</span><input type="text" id="audD" value="25" />
+              <button id="btnAudApply" class="small">apply</button>
+              <button id="btnAudAuto" class="small">auto</button>
+              <button id="btnAudHide" class="ghost small">hide</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel" style="margin-top:14px;">
+        <div class="row" style="justify-content:space-between;">
+          <h2 style="margin:0;">Questions</h2>
+          <div>
+            <label class="small"><input type="checkbox" id="soundToggle" checked /> sound on host</label>
+            <button id="btnToggleEditor" class="ghost">Edit Questions ✎</button>
+          </div>
+        </div>
+        <div class="editor" id="editor">
+          <div class="divider"></div>
+          <div class="q-list" id="qList"></div>
+          <button id="btnNewQ" class="ghost">+ New question</button>
+          <div class="divider"></div>
+          <div class="form-row">
+            <label>Question text</label>
+            <input type="text" id="edQ" placeholder="Type the question…" />
+          </div>
+          <div class="form-row">
+            <label>Answers (select the correct one)</label>
+            <div class="ans-edit"><input type="radio" name="correct" value="0" /><input type="text" id="edA0" placeholder="Answer A" /></div>
+            <div class="ans-edit"><input type="radio" name="correct" value="1" /><input type="text" id="edA1" placeholder="Answer B" /></div>
+            <div class="ans-edit"><input type="radio" name="correct" value="2" /><input type="text" id="edA2" placeholder="Answer C" /></div>
+            <div class="ans-edit"><input type="radio" name="correct" value="3" /><input type="text" id="edA3" placeholder="Answer D" /></div>
+          </div>
+          <div class="row">
+            <button id="btnSaveQ" class="green">Save question</button>
+            <button id="btnDeleteQ" class="red">Delete</button>
+            <span class="small" id="edStatus"></span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/common.js"></script>
+  <script src="/host.js"></script>
+</body>
+</html>

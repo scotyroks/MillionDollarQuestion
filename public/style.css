@@ -1,0 +1,164 @@
+/* ===== Who Wants to Be a Millionaire — shared theme ===== */
+:root {
+  --bg-deep: #02030f;
+  --bg-mid: #071a4a;
+  --blue: #0a2a7a;
+  --blue-light: #1e4fd0;
+  --gold: #f4c430;
+  --gold-soft: #e8b923;
+  --orange: #ff8c00;
+  --green: #1db954;
+  --red: #e03131;
+  --text: #ffffff;
+  --rim: #6f8bd8;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  height: 100%;
+  font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+  color: var(--text);
+  background:
+    radial-gradient(ellipse at 50% 18%, #133a8c 0%, #061238 45%, var(--bg-deep) 100%);
+  background-attachment: fixed;
+  overflow-x: hidden;
+}
+
+/* ===== Money ladder ===== */
+.ladder {
+  list-style: none;
+  display: flex;
+  flex-direction: column-reverse;
+}
+.ladder li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 5px 14px;
+  margin: 2px 0;
+  border-radius: 22px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  color: var(--gold);
+  font-size: clamp(13px, 1.4vw, 18px);
+  transition: all 0.25s ease;
+}
+.ladder li .num { width: 28px; text-align: right; opacity: 0.7; color: #cdd9ff; font-size: 0.8em; }
+.ladder li .amt { flex: 1; }
+.ladder li.safe { color: #fff; }
+.ladder li.current {
+  background: linear-gradient(90deg, #b8860b, var(--gold));
+  color: #1a1200;
+  box-shadow: 0 0 22px rgba(244,196,48,0.7);
+  transform: scale(1.04);
+}
+.ladder li.current .num { color: #4a3500; opacity: 0.9; }
+.ladder li.passed { color: #fff; opacity: 0.85; }
+
+/* ===== Answer lozenges (hexagonal millionaire shape) ===== */
+.answers {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px 26px;
+}
+.answer {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 22px;
+  min-height: 58px;
+  cursor: default;
+  clip-path: polygon(4% 0, 96% 0, 100% 50%, 96% 100%, 4% 100%, 0 50%);
+  background: linear-gradient(180deg, #061b52 0%, #02103a 100%);
+  border: 2px solid var(--rim);
+  font-size: clamp(15px, 1.8vw, 24px);
+  transition: background 0.3s, color 0.3s, opacity 0.3s;
+}
+.answer .letter { color: var(--gold); font-weight: 700; min-width: 1.4em; }
+.answer .text { color: #fff; }
+.answer.hidden-answer { visibility: hidden; }
+.answer.removed { opacity: 0.18; }
+.answer.removed .text, .answer.removed .letter { visibility: hidden; }
+.answer.selected {
+  background: linear-gradient(180deg, #ffb13d 0%, var(--orange) 100%);
+  border-color: #ffd98a;
+}
+.answer.selected .letter, .answer.selected .text { color: #2a1500; }
+.answer.locked {
+  background: linear-gradient(180deg, #ffb13d 0%, var(--orange) 100%);
+  border-color: #fff;
+  animation: pulse 0.8s ease-in-out infinite alternate;
+}
+.answer.locked .letter, .answer.locked .text { color: #2a1500; }
+.answer.correct {
+  background: linear-gradient(180deg, #2ee06a 0%, var(--green) 100%) !important;
+  border-color: #aaffcc !important;
+  animation: pop 0.4s ease;
+}
+.answer.correct .letter, .answer.correct .text { color: #03220f !important; }
+@keyframes pulse { from { box-shadow: 0 0 6px rgba(255,140,0,0.4);} to { box-shadow: 0 0 30px rgba(255,179,61,0.95);} }
+@keyframes pop { 0%{transform:scale(1);} 50%{transform:scale(1.05);} 100%{transform:scale(1);} }
+
+/* ===== Question panel ===== */
+.question-box {
+  position: relative;
+  margin-top: auto;
+  padding: 22px 30px;
+  border-radius: 14px;
+  background: linear-gradient(180deg, #061b52 0%, #02103a 100%);
+  border: 2px solid var(--rim);
+  text-align: center;
+  font-size: clamp(17px, 2.1vw, 28px);
+  min-height: 90px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 40px rgba(10,40,120,0.5) inset;
+}
+
+/* ===== Lifelines ===== */
+.lifelines { display: flex; gap: 16px; }
+.lifeline {
+  position: relative;
+  width: 64px; height: 44px;
+  border-radius: 50%/60%;
+  border: 2px solid var(--gold-soft);
+  background: radial-gradient(circle at 50% 35%, #1e4fd0, #061238);
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 700; font-size: 14px; color: var(--gold);
+  letter-spacing: 0.5px;
+}
+.lifeline.used::after {
+  content: ''; position: absolute; inset: -2px;
+  background: linear-gradient(45deg, transparent 44%, var(--red) 46%, var(--red) 54%, transparent 56%),
+              linear-gradient(-45deg, transparent 44%, var(--red) 46%, var(--red) 54%, transparent 56%);
+  border-radius: inherit;
+}
+.lifeline.used { opacity: 0.55; }
+
+/* ===== Banner overlay ===== */
+.banner {
+  position: fixed; inset: 0;
+  display: none; align-items: center; justify-content: center;
+  flex-direction: column; gap: 10px;
+  background: rgba(2,3,15,0.86); z-index: 50; text-align: center;
+}
+.banner.show { display: flex; animation: fade 0.4s ease; }
+.banner h1 { font-size: clamp(30px, 6vw, 80px); }
+.banner .amount { font-size: clamp(40px, 9vw, 120px); color: var(--gold); text-shadow: 0 0 30px rgba(244,196,48,0.7); }
+.banner.win h1 { color: var(--gold); }
+.banner.lose h1 { color: var(--red); }
+.banner.walk h1 { color: #7fd4ff; }
+@keyframes fade { from { opacity: 0; } to { opacity: 1; } }
+
+/* Audience chart */
+.audience-chart { display: flex; gap: 18px; align-items: flex-end; height: 220px; }
+.audience-bar { width: 70px; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; }
+.audience-bar .bar { width: 100%; background: linear-gradient(180deg, var(--gold), var(--orange)); border-radius: 6px 6px 0 0; transition: height 0.6s cubic-bezier(.2,.8,.2,1); min-height: 2px; }
+.audience-bar .pct { margin-bottom: 6px; font-weight: 700; color: var(--gold); }
+.audience-bar .lbl { margin-top: 8px; font-weight: 700; color: #fff; }
+
+.connection { position: fixed; top: 8px; right: 12px; font-size: 12px; color: #8aa0d8; z-index: 99; }
+.connection.bad { color: var(--red); }
