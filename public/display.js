@@ -68,6 +68,12 @@ function renderAudience(s) {
   const chart = document.getElementById('audienceChart');
   if (s.audience.visible) {
     overlay.classList.add('show');
+    const heading = overlay.querySelector('h2');
+    if (heading) {
+      heading.textContent = (s.vote && s.vote.open)
+        ? `Ask the Audience — voting live (${s.voteTotal || 0})`
+        : 'Ask the Audience';
+    }
     chart.innerHTML = '';
     s.audience.votes.forEach((v, i) => {
       const bar = document.createElement('div');

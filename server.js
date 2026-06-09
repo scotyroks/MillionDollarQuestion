@@ -95,7 +95,35 @@ function freshPerQuestion() {
     removedAnswers: [],   // 50:50 removed option indexes
     audience: { visible: false, votes: [0, 0, 0, 0] },
     phone: { active: false, endsAt: null, duration: 30 },
+    vote: { open: false, ballots: {} }, // live phone voting: voterId -> choice index
   };
+}
+
+// Tally live ballots into [countA, countB, countC, countD]
+function tallyVotes(ballots) {
+  const counts = [0, 0, 0, 0];
+  for (const choice of Object.values(ballots)) {
+    if (choice >= 0 && choice < 4) counts[choice]++;
+  }
+  return counts;
+}
+
+// Convert raw counts into whole-number percentages summing to 100
+function votesToPercents(counts) {
+  const total = counts.reduce((a, b) => a + b, 0);
+  if (!total) return [0, 0, 0, 0];
+  const raw = counts.map((c) => (c / total) * 100);
+  const floored = raw.map(Math.floor);
+  let remainder = 100 - floored.reduce((a, b) => a + b, 0);
+  // Hand out leftover points to the largest fractional parts
+  const order = raw
+    .map((v, i) => ({ i, frac: v - Math.floor(v) }))
+    .sort((a, b) => b.frac - a.frac);
+  for (let k = 0; k < order.length && remainder > 0; k++) {
+    floored[order[k].i]++;
+    remainder--;
+  }
+  return floored;
 }
 
 function freshGame() {
@@ -123,10 +151,13 @@ function guaranteedAmount(index) {
 }
 
 function fullState() {
+  const counts = tallyVotes(state.vote.ballots);
   return {
     ...state,
     questions,
     ...ladderInfo(),
+    voteCounts: counts,
+    voteTotal: counts.reduce((a, b) => a + b, 0),
     serverTime: Date.now(),
   };
 }
@@ -273,6 +304,38 @@ function handleAction(type, payload) {
       state.audience.visible = false;
       break;
 
+    // ---- Live phone voting (Ask the Audience) ----
+    case 'open_vote':
+      state.lifelines.audience = true;
+      state.vote = { open: true, ballots: {} };
+      state.audience = { visible: true, votes: [0, 0, 0, 0] }; // chart fills live
+      break;
+
+    case 'close_vote':
+      state.vote.open = false;
+      state.audience.visible = true;
+      state.audience.votes = votesToPercents(tallyVotes(state.vote.ballots));
+      break;
+
+    case 'cast_vote': {
+      // From an audience phone. Only counts while voting is open.
+      if (!state.vote.open) break;
+      const { voterId } = payload;
+      const choice = payload.choice | 0;
+      if (!voterId || choice < 0 || choice > 3) break;
+      if (state.removedAnswers.includes(choice)) break; // can't vote a 50:50'd option
+      state.vote.ballots[voterId] = choice;
+      // Keep the live chart in sync as votes arrive
+      if (state.audience.visible) {
+        state.audience.votes = votesToPercents(tallyVotes(state.vote.ballots));
+      }
+      break;
+    }
+
+    case 'reset_vote':
+      state.vote = { open: false, ballots: {} };
+      break;
+
     case 'update_questions':
       if (Array.isArray(payload.questions)) {
         questions = payload.questions;
@@ -378,9 +441,27 @@ const server = http.createServer((req, res) => {
     return;
   }
 
+  // Sanitised poll snapshot for audience phones (never exposes the correct answer)
+  if (pathname === '/poll' && req.method === 'GET') {
+    const q = questions[state.questionIndex];
+    const counts = tallyVotes(state.vote.ballots);
+    const snapshot = {
+      open: state.vote.open,
+      questionNumber: state.questionIndex + 1,
+      question: q ? q.q : '',
+      answers: q ? q.a : ['', '', '', ''],
+      removed: state.removedAnswers,
+      total: counts.reduce((a, b) => a + b, 0),
+    };
+    res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' });
+    res.end(JSON.stringify(snapshot));
+    return;
+  }
+
   // Routes
   if (pathname === '/' || pathname === '/host') return serveFile(res, path.join(PUBLIC_DIR, 'host.html'));
   if (pathname === '/display') return serveFile(res, path.join(PUBLIC_DIR, 'display.html'));
+  if (pathname === '/vote') return serveFile(res, path.join(PUBLIC_DIR, 'vote.html'));
 
   // Static files (sanitised)
   const safe = path.normalize(pathname).replace(/^(\.\.[/\\])+/, '');
@@ -402,5 +483,6 @@ server.listen(PORT, () => {
   console.log('\n  Who Wants to Be a Millionaire — game night\n');
   console.log(`  Host screen     : http://${lan}:${PORT}/host`);
   console.log(`  Contestant view : http://${lan}:${PORT}/display`);
+  console.log(`  Audience phones : http://${lan}:${PORT}/vote`);
   console.log(`  (local)         : http://localhost:${PORT}/host\n`);
 });

@@ -59,6 +59,13 @@
     .ans-edit input[type=radio] { width:18px; height:18px; }
     .audience-edit { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
     .audience-edit input { width:64px; }
+
+    .vote-tally { display:flex; flex-direction:column; gap:6px; }
+    .vote-tally .vrow { display:flex; align-items:center; gap:8px; font-size:13px; }
+    .vote-tally .vrow .vl { width:16px; color:var(--gold); font-weight:700; }
+    .vote-tally .vrow .vt { flex:1; height:16px; background:#03103a; border-radius:8px; overflow:hidden; border:1px solid #24407e; }
+    .vote-tally .vrow .vf { height:100%; background:linear-gradient(90deg,var(--gold),var(--orange)); width:0; transition:width .4s; }
+    .vote-tally .vrow .vn { width:64px; text-align:right; color:#cdd9ff; }
   </style>
 </head>
 <body>
@@ -123,6 +130,17 @@
             </div>
           </div>
         </div>
+
+        <div class="divider"></div>
+        <h2 style="margin-bottom:6px;">📱 Live audience vote (phones)</h2>
+        <div class="row">
+          <button id="btnOpenVote" class="green"><b>Open Live Vote</b></button>
+          <button id="btnCloseVote" class="gold">Close &amp; Lock</button>
+          <button id="btnResetVote" class="ghost small">clear votes</button>
+          <span class="small">Status: <b id="voteStatus">closed</b> · <b id="voteTotal">0</b> votes</span>
+        </div>
+        <div class="vote-tally" id="voteTally" style="margin-top:10px;"></div>
+        <div class="small" id="voteUrl" style="margin-top:8px;"></div>
       </div>
 
       <div class="panel" style="margin-top:14px;">

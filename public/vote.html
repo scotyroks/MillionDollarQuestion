@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <title>Vote — Ask the Audience</title>
+  <link rel="stylesheet" href="/style.css" />
+  <style>
+    body { display: flex; flex-direction: column; min-height: 100vh; padding: 18px; }
+    .wrap { max-width: 480px; margin: 0 auto; width: 100%; flex: 1; display: flex; flex-direction: column; }
+    .brand { text-align: center; color: var(--gold); font-weight: 800; font-size: 20px; letter-spacing: 1px; margin-bottom: 4px; }
+    .sub { text-align: center; color: #9fb4e8; font-size: 13px; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 18px; }
+    .qbox { background: linear-gradient(180deg,#061b52,#02103a); border:1px solid var(--rim); border-radius: 12px; padding: 16px; text-align:center; font-size: 18px; margin-bottom: 16px; min-height: 60px; display:flex; align-items:center; justify-content:center; }
+    .opts { display: flex; flex-direction: column; gap: 12px; }
+    .opt {
+      display: flex; align-items: center; gap: 12px;
+      padding: 16px 18px; border-radius: 12px;
+      border: 2px solid var(--rim); background: linear-gradient(180deg,#061b52,#02103a);
+      color: #fff; font-size: 18px; text-align: left; cursor: pointer;
+      transition: transform .05s, background .2s, border-color .2s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .opt:active { transform: scale(0.98); }
+    .opt .letter { color: var(--gold); font-weight: 800; min-width: 1.3em; }
+    .opt.chosen { background: linear-gradient(180deg,#ffb13d,var(--orange)); border-color:#fff; }
+    .opt.chosen .letter, .opt.chosen .text { color:#2a1500; }
+    .opt:disabled { opacity: .35; cursor: not-allowed; }
+    .status { text-align: center; margin-top: 20px; font-size: 15px; color: #9fb4e8; min-height: 24px; }
+    .status.live { color: var(--green); font-weight: 700; }
+    .closed-card { text-align:center; padding: 30px 16px; color:#9fb4e8; }
+    .closed-card .big { font-size: 22px; color: var(--gold); margin-bottom: 8px; }
+    .foot { text-align:center; color:#5f76b0; font-size: 11px; margin-top: 18px; }
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="brand">Ask the Audience</div>
+    <div class="sub">Vote on your phone</div>
+
+    <div id="liveView">
+      <div class="qbox" id="qbox">Waiting for the host…</div>
+      <div class="opts" id="opts"></div>
+      <div class="status" id="status">Voting is not open yet.</div>
+    </div>
+
+    <div class="closed-card hidden" id="waitView">
+      <div class="big">Hang tight!</div>
+      <div>Voting isn't open right now. This page will update automatically when the host starts the next audience vote.</div>
+    </div>
+
+    <div class="foot">Stay on this page — it updates automatically.</div>
+  </div>
+
+  <script>
+    // Stable per-phone id so re-tapping changes the vote instead of adding one.
+    let voterId = localStorage.getItem('mq_voter_id');
+    if (!voterId) {
+      voterId = 'v_' + Math.random().toString(36).slice(2) + Date.now().toString(36);
+      localStorage.setItem('mq_voter_id', voterId);
+    }
+
+    const LETTERS = ['A', 'B', 'C', 'D'];
+    let myChoice = null;
+    let lastQuestion = '';
+    let voteOpen = false;
+
+    const optsEl = document.getElementById('opts');
+    const qbox = document.getElementById('qbox');
+    const statusEl = document.getElementById('status');
+    const liveView = document.getElementById('liveView');
+    const waitView = document.getElementById('waitView');
+
+    function buildOptions(answers, removed) {
+      optsEl.innerHTML = '';
+      answers.forEach((text, i) => {
+        const btn = document.createElement('button');
+        btn.className = 'opt' + (myChoice === i ? ' chosen' : '');
+        btn.disabled = !voteOpen || removed.includes(i);
+        btn.innerHTML = `<span class="letter">${LETTERS[i]}</span><span class="text">${escapeHtml(text)}</span>`;
+        btn.onclick = () => castVote(i);
+        optsEl.appendChild(btn);
+      });
+    }
+
+    async function castVote(i) {
+      if (!voteOpen) return;
+      myChoice = i;
+      buildOptions(currentAnswers, currentRemoved);
+      statusEl.textContent = `You voted ${LETTERS[i]} ✓  (tap another to change)`;
+      statusEl.classList.add('live');
+      try {
+        await fetch('/action', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ type: 'cast_vote', payload: { voterId, choice: i } }),
+        });
+      } catch (_) { statusEl.textContent = 'Network hiccup — tap again.'; }
+    }
+
+    let currentAnswers = ['', '', '', ''];
+    let currentRemoved = [];
+
+    async function poll() {
+      try {
+        const res = await fetch('/poll', { cache: 'no-store' });
+        const s = await res.json();
+        const wasOpen = voteOpen;
+        voteOpen = s.open;
+        currentAnswers = s.answers;
+        currentRemoved = s.removed || [];
+
+        // New question/session -> forget previous selection
+        const qKey = s.questionNumber + '|' + s.question;
+        if (qKey !== lastQuestion) { lastQuestion = qKey; myChoice = null; }
+
+        if (voteOpen) {
+          liveView.classList.remove('hidden');
+          waitView.classList.add('hidden');
+          qbox.textContent = s.question || 'Get ready…';
+          buildOptions(currentAnswers, currentRemoved);
+          if (myChoice === null) {
+            statusEl.textContent = `Voting is OPEN — tap your answer!  (${s.total} votes in)`;
+            statusEl.classList.remove('live');
+          } else {
+            statusEl.textContent = `You voted ${LETTERS[myChoice]} ✓  (${s.total} votes in)`;
+            statusEl.classList.add('live');
+          }
+        } else {
+          liveView.classList.add('hidden');
+          waitView.classList.remove('hidden');
+        }
+      } catch (_) { /* keep trying */ }
+    }
+
+    function escapeHtml(str) {
+      return String(str).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+
+    poll();
+    setInterval(poll, 1500);
+  </script>
+</body>
+</html>

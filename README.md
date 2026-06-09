@@ -48,8 +48,24 @@ To use a different port: `PORT=8080 node server.js`.
 ### Lifelines
 - **50:50** — removes two wrong answers on both screens.
 - **☎ Phone a Friend** — launches a 30-second countdown on the contestant screen.
-- **👥 Ask the Audience** — shows a bar chart. Hit **auto** for realistic
-  audience numbers, or type your own percentages and hit **apply**.
+- **👥 Ask the Audience** — three ways to run it:
+  - **auto** — realistic computer-generated numbers.
+  - **manual** — type your own percentages and hit **apply**.
+  - **📱 live phone vote** — the audience votes from their own phones (below).
+
+### 📱 Live audience voting (phones)
+Let everyone in the room vote on their phones for *Ask the Audience*:
+
+1. Have the audience open **`http://<your-ip>:3000/vote`** (same Wi-Fi). The
+   exact address is printed in the terminal when the server starts.
+2. On the host screen, under **Live audience vote**, click **Open Live Vote**.
+3. Phones light up with A/B/C/D buttons — everyone taps their answer. (Tapping
+   again changes a vote; each phone counts once.) The contestant's chart fills
+   in **live** as votes arrive, and the host sees a running tally.
+4. Click **Close & Lock** to freeze the final result on the big screen.
+
+The voting page only ever receives the question and answer options — **the
+correct answer is never sent to anyone's phone.**
 
 ### Editing questions
 Click **Edit Questions ✎** on the host screen to add, edit, reorder by saving,
@@ -66,6 +82,7 @@ Changes are saved to `questions.json` and persist between runs.
 | Sync | Server-Sent Events (`/events`) push state; host posts to `/action` |
 | Host UI | `public/host.html` + `host.js` |
 | Display UI | `public/display.html` + `display.js` |
+| Audience phones | `public/vote.html` polls the sanitised `/poll` endpoint |
 | Audio | Synthesized via Web Audio (`common.js`) — no copyrighted files |
 | Questions | `questions.json` (auto-created from a built-in sample set) |
 

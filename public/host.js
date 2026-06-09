@@ -55,6 +55,30 @@ function render(s) {
   $('btnPhone').style.opacity = s.lifelines.phone ? 0.4 : 1;
   $('btnAudience').style.opacity = s.lifelines.audience ? 0.4 : 1;
 
+  // Live phone-vote panel
+  const vOpen = s.vote && s.vote.open;
+  $('voteStatus').textContent = vOpen ? 'OPEN' : 'closed';
+  $('voteStatus').style.color = vOpen ? 'var(--green)' : '#9fb4e8';
+  $('voteTotal').textContent = s.voteTotal || 0;
+  $('btnOpenVote').disabled = vOpen;
+  $('btnCloseVote').disabled = !vOpen;
+
+  const counts = s.voteCounts || [0, 0, 0, 0];
+  const total = s.voteTotal || 0;
+  const tally = $('voteTally');
+  tally.innerHTML = '';
+  for (let i = 0; i < 4; i++) {
+    const pct = total ? Math.round((counts[i] / total) * 100) : 0;
+    const row = document.createElement('div');
+    row.className = 'vrow';
+    row.innerHTML = `<span class="vl">${LETTERS[i]}</span><span class="vt"><span class="vf" style="width:${pct}%"></span></span><span class="vn">${counts[i]} (${pct}%)</span>`;
+    tally.appendChild(row);
+  }
+  if (!$('voteUrl').dataset.set) {
+    $('voteUrl').innerHTML = `Audience opens: <b>${location.origin}/vote</b> on their phones (same Wi‑Fi).`;
+    $('voteUrl').dataset.set = '1';
+  }
+
   // Keep editor list fresh if open and not mid-edit-typing
   if ($('editor').classList.contains('show') && document.activeElement.tagName !== 'INPUT') {
     renderQList(s.questions);
@@ -81,6 +105,11 @@ function wire() {
   $('btnAudApply').onclick = applyAudience;
   $('btnAudAuto').onclick = () => Game.action('use_audience'); // server auto-generates
   $('btnAudHide').onclick = () => Game.action('hide_audience');
+
+  // Live phone voting
+  $('btnOpenVote').onclick = () => { Sound.play('lifeline'); Game.action('open_vote'); };
+  $('btnCloseVote').onclick = () => { Sound.play('reveal'); Game.action('close_vote'); };
+  $('btnResetVote').onclick = () => Game.action('reset_vote');
 
   $('soundToggle').onchange = (e) => { Sound.enabled = e.target.checked; };
 
