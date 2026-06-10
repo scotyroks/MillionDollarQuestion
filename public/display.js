@@ -2,6 +2,9 @@
 
 let prev = {};
 let phoneInterval = null;
+let qTimerInterval = null;
+let qTimerLastSec = null;   // dedupe tick sounds (interval runs sub-second)
+let qTimerBuzzed = false;   // play the time-up buzzer once per countdown
 
 // Audio needs a user gesture to start in browsers. Show a one-time hint.
 function armAudio() {
@@ -129,6 +132,37 @@ function renderPhone(s) {
   }
 }
 
+function renderQTimer(s) {
+  const el = document.getElementById('qTimer');
+  const count = document.getElementById('qTimerCount');
+  const t = s.qtimer || {};
+  const show = s.phase === 'playing' && t.duration !== null
+    && s.lockedAnswer === null && s.revealStage === 'none' && !s.resultRevealed;
+  if (qTimerInterval) { clearInterval(qTimerInterval); qTimerInterval = null; }
+  if (!show) {
+    el.classList.remove('show', 'low', 'zero', 'paused');
+    return;
+  }
+  el.classList.add('show');
+  el.classList.toggle('paused', !t.running);
+  const tick = () => {
+    const st = Game.state;
+    const left = timerLeft(st);
+    if (left === null) return;
+    count.textContent = left;
+    el.classList.toggle('low', left > 0 && left <= 5);
+    el.classList.toggle('zero', left === 0);
+    if (st.qtimer && st.qtimer.running) {
+      if (left > 0 && left <= 5 && left !== qTimerLastSec) Sound.play('tick');
+      if (left === 0 && !qTimerBuzzed) { qTimerBuzzed = true; Sound.play('timeup'); }
+    }
+    if (left > 0) qTimerBuzzed = false;
+    qTimerLastSec = left;
+  };
+  tick();
+  if (t.running) qTimerInterval = setInterval(tick, 200);
+}
+
 function renderBanner(s) {
   const banner = document.getElementById('banner');
   const title = document.getElementById('bannerTitle');
@@ -172,6 +206,7 @@ function render(s) {
   renderQuestion(s);
   renderAudience(s);
   renderPhone(s);
+  renderQTimer(s);
   renderBanner(s);
   cues(s);
 

@@ -2,6 +2,7 @@
 
 const Game = {
   state: null,
+  clockOffset: 0, // serverTime - local Date.now(), for countdowns on other devices
   listeners: [],
   onState(fn) { this.listeners.push(fn); if (this.state) fn(this.state); },
   _emit() { for (const fn of this.listeners) fn(this.state); },
@@ -11,6 +12,7 @@ const Game = {
     const es = new EventSource('/events');
     es.onmessage = (e) => {
       this.state = JSON.parse(e.data);
+      if (this.state.serverTime) this.clockOffset = this.state.serverTime - Date.now();
       if (dot) { dot.textContent = '● live'; dot.classList.remove('bad'); }
       this._emit();
     };
@@ -34,6 +36,16 @@ function fmtMoney(n) {
   return '$' + Number(n).toLocaleString('en-US');
 }
 const LETTERS = ['A', 'B', 'C', 'D'];
+
+// Seconds left on the question countdown, or null if it hasn't started.
+// Uses the server clock offset so a TV with a skewed clock stays accurate.
+function timerLeft(s) {
+  const t = s && s.qtimer;
+  if (!t || t.duration === null) return null;
+  if (!t.running) return t.remaining;
+  const serverNow = Date.now() + Game.clockOffset;
+  return Math.max(0, Math.ceil((t.endsAt - serverNow) / 1000));
+}
 
 /* ---- Audio engine: synthesized cues, no external files ---- */
 const Sound = {
@@ -84,6 +96,11 @@ const Sound = {
         break;
       case 'tick':
         this.tone(1000, 0, 0.05, 'square', 0.08);
+        break;
+      case 'timeup': // question clock hits zero
+        this.tone(220, 0, 0.35, 'sawtooth', 0.2);
+        this.tone(180, 0.3, 0.4, 'sawtooth', 0.2);
+        this.tone(110, 0.6, 0.9, 'square', 0.18);
         break;
       case 'suspense': // low rising drone during the reveal pause
         this.tone(70, 0, 2.4, 'sawtooth', 0.16);

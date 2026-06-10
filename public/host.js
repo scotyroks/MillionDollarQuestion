@@ -98,6 +98,14 @@ function render(s) {
     $('voteUrl').dataset.set = '1';
   }
 
+  // Answer clock controls
+  const t = s.qtimer || {};
+  const clockFrozen = s.lockedAnswer !== null || s.revealStage !== 'none';
+  $('btnTimerPause').disabled = !t.running;
+  $('btnTimerResume').disabled = t.running || t.duration === null || !t.remaining || clockFrozen;
+  $('btnTimerRestart').disabled = s.answersRevealed < 4 || clockFrozen;
+  updateTimerReadout();
+
   renderPlayers(s);
   $('btnSkip').disabled = !s.players || s.players.length < 2;
 
@@ -128,6 +136,12 @@ function wire() {
   $('btnAudApply').onclick = applyAudience;
   $('btnAudAuto').onclick = () => { Sound.play('lifeline'); Game.action('use_audience'); }; // server auto-generates
   $('btnAudHide').onclick = () => Game.action('hide_audience');
+
+  // Answer clock
+  $('btnTimerPause').onclick = () => Game.action('pause_timer');
+  $('btnTimerResume').onclick = () => Game.action('resume_timer');
+  $('btnTimerRestart').onclick = () => Game.action('restart_timer');
+  setInterval(updateTimerReadout, 250); // keep the readout ticking between broadcasts
 
   // Live phone voting
   $('btnOpenVote').onclick = () => { Sound.play('lifeline'); Game.action('open_vote'); };
@@ -167,7 +181,21 @@ function wire() {
     else if (k === 'r') $('btnResult').click();
     else if (k === 'n') $('btnNext').click();
     else if (k === 'p') $('btnPrev').click();
+    else if (k === 't') {
+      if (!$('btnTimerPause').disabled) $('btnTimerPause').click();
+      else $('btnTimerResume').click();
+    }
   });
+}
+
+function updateTimerReadout() {
+  if (!Game.state) return;
+  const t = Game.state.qtimer || {};
+  const left = timerLeft(Game.state);
+  const el = $('timerLeft');
+  if (left === null) { el.textContent = '—'; el.style.color = 'var(--gold)'; return; }
+  el.textContent = left + 's' + (t.running ? '' : ' ⏸');
+  el.style.color = left === 0 ? 'var(--red)' : (left <= 5 ? '#ff8a93' : 'var(--gold)');
 }
 
 function addPlayer() {

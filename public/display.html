@@ -41,6 +41,25 @@
     .phone-timer.show { display: flex; }
     .phone-timer .count { font-size: 26vh; font-weight: 900; color: var(--gold); text-shadow: 0 0 50px rgba(244,196,48,0.7); }
     .phone-timer .lbl { letter-spacing: 5px; text-transform: uppercase; color: var(--gold-soft); }
+
+    /* Answer countdown clock */
+    .qtimer {
+      display: none; align-items: center; justify-content: center; align-self: center;
+      width: 96px; height: 96px; border-radius: 50%;
+      border: 3px solid var(--gold-soft);
+      background: radial-gradient(circle at 50% 35%, #0a3522, #03160e);
+      font-size: 42px; font-weight: 900; color: var(--gold);
+      text-shadow: 0 0 14px rgba(244,196,48,0.5);
+      box-shadow: 0 0 24px rgba(244,196,48,0.35);
+    }
+    .qtimer.show { display: flex; }
+    .qtimer.paused { opacity: 0.5; }
+    .qtimer.low { border-color: var(--red); color: #ff8a93; animation: timerpulse 0.5s ease-in-out infinite alternate; }
+    .qtimer.zero { border-color: var(--red); color: var(--red); animation: none; }
+    @keyframes timerpulse {
+      from { box-shadow: 0 0 10px rgba(224,65,79,0.4); }
+      to { box-shadow: 0 0 38px rgba(224,65,79,0.95); }
+    }
   </style>
 </head>
 <body>
@@ -74,6 +93,7 @@
             <span class="seat-name" id="seatName"></span>
           </div>
           <div class="lifelines" id="lifelines"></div>
+          <div class="qtimer" id="qTimer"><span id="qTimerCount"></span></div>
           <div class="question-box" id="questionBox"></div>
           <div class="answers" id="answers"></div>
         </div>

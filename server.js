@@ -115,7 +115,41 @@ function freshPerQuestion() {
     audience: { visible: false, votes: [0, 0, 0, 0] },
     phone: { active: false, endsAt: null, duration: 30 },
     vote: { open: false, ballots: {} }, // live phone voting: voterId -> choice index
+    qtimer: freshTimer(), // answer countdown; starts when the last answer is revealed
   };
+}
+
+// ---- Question countdown timer ------------------------------------------
+// Starts automatically when answer D is revealed. Duration is tiered by
+// ladder position. At zero nothing changes server-side — the buzzer sounds
+// on the big screen and the host stays in control.
+function freshTimer() {
+  return { running: false, endsAt: null, remaining: null, duration: null };
+}
+
+function timerDuration(index) {
+  if (index < 5) return 15;   // questions 1-5
+  if (index < 10) return 30;  // questions 6-10
+  if (index < 14) return 45;  // questions 11-14
+  return 60;                  // question 15
+}
+
+function startQuestionTimer() {
+  const duration = timerDuration(state.questionIndex);
+  state.qtimer = {
+    running: true,
+    duration,
+    remaining: duration,
+    endsAt: Date.now() + duration * 1000,
+  };
+}
+
+function pauseQuestionTimer() {
+  const t = state.qtimer;
+  if (!t.running) return;
+  t.running = false;
+  t.remaining = Math.max(0, Math.ceil((t.endsAt - Date.now()) / 1000));
+  t.endsAt = null;
 }
 
 // Tally live ballots into [countA, countB, countC, countD]
@@ -302,6 +336,9 @@ function handleAction(type, payload) {
       state.revealStage = 'none';
       state.banner = null;
       state.phase = 'playing';
+      // Fresh clock for the new player's attempt (if the answers are out).
+      if (state.answersRevealed === 4) startQuestionTimer();
+      else state.qtimer = freshTimer();
       break;
     }
 
@@ -312,11 +349,14 @@ function handleAction(type, payload) {
     case 'reveal_answers': // reveal the next answer
       state.questionVisible = true;
       if (state.answersRevealed < 4) state.answersRevealed++;
+      // The clock starts the moment the final answer hits the screen.
+      if (state.answersRevealed === 4 && state.qtimer.duration === null) startQuestionTimer();
       break;
 
     case 'reveal_all_answers':
       state.questionVisible = true;
       state.answersRevealed = 4;
+      if (state.qtimer.duration === null) startQuestionTimer();
       break;
 
     case 'select_answer': {
@@ -330,6 +370,28 @@ function handleAction(type, payload) {
     case 'lock_answer':
       if (state.selectedAnswer !== null && !state.resultRevealed) {
         state.lockedAnswer = state.selectedAnswer;
+        pauseQuestionTimer(); // the clock stops once the answer is in
+      }
+      break;
+
+    case 'pause_timer':
+      pauseQuestionTimer();
+      break;
+
+    case 'resume_timer': {
+      const t = state.qtimer;
+      if (!t.running && t.duration !== null && t.remaining > 0
+          && state.lockedAnswer === null && state.revealStage === 'none') {
+        t.running = true;
+        t.endsAt = Date.now() + t.remaining * 1000;
+      }
+      break;
+    }
+
+    case 'restart_timer':
+      if (state.answersRevealed === 4 && state.lockedAnswer === null
+          && state.revealStage === 'none') {
+        startQuestionTimer();
       }
       break;
 
@@ -378,6 +440,7 @@ function handleAction(type, payload) {
     case 'walk_away':
       state.phase = 'walked';
       state.resultRevealed = true;
+      pauseQuestionTimer();
       // Like the show: once they walk, the room gets to see what the right
       // answer was (visible once the host clears the overlay).
       state.revealStage = 'revealed';
@@ -413,6 +476,7 @@ function handleAction(type, payload) {
     case 'use_phone': {
       if (state.lifelines.phone) break;
       state.lifelines.phone = true;
+      pauseQuestionTimer(); // clock holds during the lifeline; host resumes
       const duration = Math.max(5, Math.min(300, (payload.duration | 0) || 30));
       state.phone = {
         active: true,
@@ -429,11 +493,13 @@ function handleAction(type, payload) {
     case 'use_audience':
       if (state.lifelines.audience) break;
       state.lifelines.audience = true;
+      pauseQuestionTimer();
       state.audience = { visible: true, votes: payload.votes || generateAudienceVotes() };
       break;
 
     case 'set_audience_votes':
       state.lifelines.audience = true;
+      pauseQuestionTimer();
       state.audience.votes = payload.votes;
       state.audience.visible = true;
       break;
@@ -445,6 +511,7 @@ function handleAction(type, payload) {
     // ---- Live phone voting (Ask the Audience) ----
     case 'open_vote':
       state.lifelines.audience = true;
+      pauseQuestionTimer();
       state.vote = { open: true, ballots: {} };
       state.audience = { visible: true, votes: [0, 0, 0, 0] }; // chart fills live
       break;

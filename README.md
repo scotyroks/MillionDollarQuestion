@@ -44,6 +44,11 @@ and WebP all work — keep the name `logo.png`.)
 
 - **Start Game** — shows the play area on the contestant screen.
 - **Reveal Question** → **Reveal Answers** — stage the dramatic reveal.
+- **Answer clock** — starts automatically the moment answer **D** hits the
+  screen: **15s** (Q1–5), **30s** (Q6–10), **45s** (Q11–14), **60s** (Q15).
+  It stops on lock-in and holds while a lifeline runs. At zero a buzzer
+  sounds and the clock flashes red — what happens next is the host's call.
+  **Pause / Resume / Restart** controls are on the host panel.
 - **Click an answer** — highlights it orange as the contestant's choice.
 - **🔒 Lock In** — locks the choice (pulsing) with a suspense sound.
 - **Reveal Answer** — builds suspense: a dramatic pause, then the answer
@@ -58,7 +63,8 @@ and WebP all work — keep the name `logo.png`.)
 
 **Keyboard shortcuts** (host screen): **A–D** or **1–4** pick an answer,
 **Q** reveal question, **Space** reveal next answer, **L** lock in,
-**R** reveal result, **N**/**P** next/previous question.
+**R** reveal result, **T** pause/resume the answer clock,
+**N**/**P** next/previous question.
 
 ### Lifelines
 - **50:50** — removes two wrong answers on both screens. (Not available once
