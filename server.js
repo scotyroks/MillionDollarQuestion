@@ -31,36 +31,51 @@ const SAFE_HAVENS = [4, 9]; // indexes guaranteed once passed
 // ---- Questions persistence -------------------------------------------------
 
 const SAMPLE_QUESTIONS = [
-  { q: 'Which planet is known as the Red Planet?',
-    a: ['Venus', 'Mars', 'Jupiter', 'Mercury'], correct: 1 },
-  { q: 'What is the largest mammal in the world?',
-    a: ['African Elephant', 'Blue Whale', 'Giraffe', 'Polar Bear'], correct: 1 },
-  { q: 'In which year did the first manned Moon landing take place?',
-    a: ['1965', '1969', '1972', '1958'], correct: 1 },
-  { q: 'What is the chemical symbol for gold?',
-    a: ['Gd', 'Go', 'Au', 'Ag'], correct: 2 },
-  { q: 'Who painted the Mona Lisa?',
-    a: ['Michelangelo', 'Raphael', 'Leonardo da Vinci', 'Donatello'], correct: 2 },
-  { q: 'How many strings does a standard violin have?',
-    a: ['Four', 'Five', 'Six', 'Seven'], correct: 0 },
-  { q: 'Which country hosted the 2016 Summer Olympics?',
-    a: ['China', 'Brazil', 'UK', 'Russia'], correct: 1 },
-  { q: 'What is the hardest natural substance on Earth?',
-    a: ['Gold', 'Iron', 'Diamond', 'Quartz'], correct: 2 },
-  { q: 'Which gas do plants absorb from the atmosphere?',
-    a: ['Oxygen', 'Nitrogen', 'Carbon Dioxide', 'Hydrogen'], correct: 2 },
+  // $100 — trivial
+  { q: 'How many days are there in a week?',
+    a: ['Five', 'Six', 'Seven', 'Eight'], correct: 2 },
+  // $200 — very easy
+  { q: 'What colour do you get by mixing blue and yellow?',
+    a: ['Red', 'Green', 'Purple', 'Orange'], correct: 1 },
+  // $300 — easy
+  { q: 'Which animal is commonly known as "man\'s best friend"?',
+    a: ['Cat', 'Dog', 'Horse', 'Rabbit'], correct: 1 },
+  // $500 — easy
+  { q: 'How many sides does a triangle have?',
+    a: ['Two', 'Three', 'Four', 'Five'], correct: 1 },
+  // $1,000 (safe haven) — easy/medium
+  { q: 'What is the capital city of France?',
+    a: ['London', 'Berlin', 'Paris', 'Madrid'], correct: 2 },
+  // $2,000 — medium
+  { q: 'How many continents are there on Earth?',
+    a: ['Five', 'Six', 'Seven', 'Eight'], correct: 2 },
+  // $4,000 — medium
   { q: 'Who wrote the play "Romeo and Juliet"?',
     a: ['Charles Dickens', 'William Shakespeare', 'Jane Austen', 'Mark Twain'], correct: 1 },
-  { q: 'What is the smallest prime number?',
-    a: ['0', '1', '2', '3'], correct: 2 },
-  { q: 'Which ocean is the largest by surface area?',
-    a: ['Atlantic', 'Indian', 'Arctic', 'Pacific'], correct: 3 },
-  { q: 'The Great Wall is located in which country?',
-    a: ['Japan', 'India', 'China', 'Mongolia'], correct: 2 },
-  { q: 'How many sides does a hexagon have?',
-    a: ['Five', 'Six', 'Seven', 'Eight'], correct: 1 },
-  { q: 'Which element has the atomic number 1?',
-    a: ['Helium', 'Oxygen', 'Hydrogen', 'Carbon'], correct: 2 },
+  // $8,000 — medium/hard
+  { q: 'Which element has the chemical symbol "Na"?',
+    a: ['Nitrogen', 'Sodium', 'Neon', 'Nickel'], correct: 1 },
+  // $16,000 — hard
+  { q: 'In which year did the Second World War end?',
+    a: ['1943', '1945', '1947', '1950'], correct: 1 },
+  // $32,000 (safe haven) — hard
+  { q: 'Who painted the ceiling of the Sistine Chapel?',
+    a: ['Leonardo da Vinci', 'Raphael', 'Michelangelo', 'Donatello'], correct: 2 },
+  // $64,000 — hard
+  { q: 'Which is the smallest country in the world by land area?',
+    a: ['Monaco', 'Nauru', 'Vatican City', 'San Marino'], correct: 2 },
+  // $125,000 — very hard
+  { q: 'Which classic novel opens with the line "Call me Ishmael"?',
+    a: ['Moby-Dick', 'The Great Gatsby', 'War and Peace', 'Ulysses'], correct: 0 },
+  // $250,000 — very hard
+  { q: 'What is the chemical symbol for the element tungsten?',
+    a: ['W', 'Tu', 'Tg', 'Tn'], correct: 0 },
+  // $500,000 — extremely hard
+  { q: 'In which year was the Magna Carta sealed by King John of England?',
+    a: ['1066', '1215', '1314', '1492'], correct: 1 },
+  // $1,000,000 — million-dollar obscurity
+  { q: 'Who was the Roman emperor when Mount Vesuvius erupted and buried Pompeii in 79 AD?',
+    a: ['Nero', 'Titus', 'Augustus', 'Hadrian'], correct: 1 },
 ];
 
 function loadQuestions() {
