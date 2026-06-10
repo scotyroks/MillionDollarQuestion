@@ -68,7 +68,7 @@ function render(s) {
   setLifelineCard('5050', used.fifty);
   setLifelineCard('Phone', used.phone);
   setLifelineCard('Audience', used.audience);
-  $('btn5050').disabled = used.fifty;
+  $('btn5050').disabled = used.fifty || s.lockedAnswer !== null || s.revealStage !== 'none';
   $('btnPhone').disabled = used.phone;
   $('btnPhoneStop').disabled = !(s.phone && s.phone.active);
 
@@ -148,6 +148,26 @@ function wire() {
   // Players / hot seat
   $('btnAddPlayer').onclick = addPlayer;
   $('playerName').addEventListener('keydown', (e) => { if (e.key === 'Enter') addPlayer(); });
+
+  // Keyboard shortcuts (ignored while typing). Disabled buttons stay inert
+  // because .click() is a no-op on them.
+  const SELECT_KEYS = { a: 0, b: 1, c: 2, d: 3, 1: 0, 2: 1, 3: 2, 4: 3 };
+  document.addEventListener('keydown', (e) => {
+    const tag = (e.target.tagName || '').toLowerCase();
+    if (tag === 'input' || tag === 'textarea' || e.metaKey || e.ctrlKey || e.altKey) return;
+    const k = e.key.toLowerCase();
+    if (k in SELECT_KEYS) {
+      Sound.play('reveal');
+      Game.action('select_answer', { index: SELECT_KEYS[k] });
+    } else if (k === ' ') {
+      e.preventDefault(); // don't scroll or re-trigger a focused button
+      $('btnRevealA').click();
+    } else if (k === 'q') $('btnRevealQ').click();
+    else if (k === 'l') $('btnLock').click();
+    else if (k === 'r') $('btnResult').click();
+    else if (k === 'n') $('btnNext').click();
+    else if (k === 'p') $('btnPrev').click();
+  });
 }
 
 function addPlayer() {

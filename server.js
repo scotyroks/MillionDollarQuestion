@@ -319,9 +319,13 @@ function handleAction(type, payload) {
       state.answersRevealed = 4;
       break;
 
-    case 'select_answer':
-      if (!state.resultRevealed) state.selectedAnswer = payload.index;
+    case 'select_answer': {
+      const idx = payload.index | 0;
+      if (idx < 0 || idx > 3) break;
+      if (state.removedAnswers.includes(idx)) break;
+      if (state.revealStage === 'none' && !state.resultRevealed) state.selectedAnswer = idx;
       break;
+    }
 
     case 'lock_answer':
       if (state.selectedAnswer !== null && !state.resultRevealed) {
@@ -355,20 +359,28 @@ function handleAction(type, payload) {
           state.phase = 'won';
           state.banner = { kind: 'win', amount: LADDER[qIdx] };
         });
-      } else if (!isCorrect) {
+      } else if (isCorrect) {
+        // Celebrate the climb: "CORRECT!" banner with the new amount.
+        // Host advances with Next, which clears it.
+        laterReveal(token, SUSPENSE_MS + 1200, () => {
+          state.banner = { kind: 'correct', amount: LADDER[Math.min(qIdx, LADDER.length - 1)] };
+        });
+      } else {
         // Hold the red flash, then drop the Game Over screen.
         laterReveal(token, SUSPENSE_MS + WRONG_HOLD_MS, () => {
           state.phase = 'lost';
           state.banner = { kind: 'lose', amount: guaranteedAmount(qIdx) };
         });
       }
-      // Non-final correct answers just stay green — host advances with Next.
       break;
     }
 
     case 'walk_away':
       state.phase = 'walked';
       state.resultRevealed = true;
+      // Like the show: once they walk, the room gets to see what the right
+      // answer was (visible once the host clears the overlay).
+      state.revealStage = 'revealed';
       state.banner = {
         kind: 'walk',
         amount: state.questionIndex > 0 ? LADDER[state.questionIndex - 1] : 0,
@@ -381,6 +393,9 @@ function handleAction(type, payload) {
 
     case 'use_fifty': {
       if (state.lifelines.fifty) break;
+      // No 50:50 once an answer is locked or the reveal has started — it
+      // could remove the very answer that's pulsing on the big screen.
+      if (state.lockedAnswer !== null || state.revealStage !== 'none') break;
       state.lifelines.fifty = true;
       const correctIdx = questions[state.questionIndex].correct;
       const wrong = [0, 1, 2, 3].filter((i) => i !== correctIdx);
@@ -390,18 +405,22 @@ function handleAction(type, payload) {
         [wrong[i], wrong[j]] = [wrong[j], wrong[i]];
       }
       state.removedAnswers = wrong.slice(0, 2);
+      // Drop a highlighted pick if it just got removed.
+      if (state.removedAnswers.includes(state.selectedAnswer)) state.selectedAnswer = null;
       break;
     }
 
-    case 'use_phone':
+    case 'use_phone': {
       if (state.lifelines.phone) break;
       state.lifelines.phone = true;
+      const duration = Math.max(5, Math.min(300, (payload.duration | 0) || 30));
       state.phone = {
         active: true,
-        duration: payload.duration || 30,
-        endsAt: Date.now() + (payload.duration || 30) * 1000,
+        duration,
+        endsAt: Date.now() + duration * 1000,
       };
       break;
+    }
 
     case 'stop_phone':
       state.phone.active = false;
@@ -439,10 +458,13 @@ function handleAction(type, payload) {
     case 'cast_vote': {
       // From an audience phone. Only counts while voting is open.
       if (!state.vote.open) break;
-      const { voterId } = payload;
+      const voterId = String(payload.voterId || '').slice(0, 64);
       const choice = payload.choice | 0;
       if (!voterId || choice < 0 || choice > 3) break;
       if (state.removedAnswers.includes(choice)) break; // can't vote a 50:50'd option
+      // Cap distinct ballots so junk voter ids can't grow memory unbounded.
+      if (!(voterId in state.vote.ballots)
+          && Object.keys(state.vote.ballots).length >= 2000) break;
       state.vote.ballots[voterId] = choice;
       // Keep the live chart in sync as votes arrive
       if (state.audience.visible) {
@@ -457,7 +479,9 @@ function handleAction(type, payload) {
 
     case 'update_questions':
       if (Array.isArray(payload.questions)) {
-        questions = payload.questions;
+        const cleaned = payload.questions.map(sanitizeQuestion).filter(Boolean);
+        if (!cleaned.length) break; // never wipe the bank with bad input
+        questions = cleaned;
         saveQuestions(questions);
         if (state.questionIndex >= questions.length) {
           state.questionIndex = Math.max(0, questions.length - 1);
@@ -470,6 +494,16 @@ function handleAction(type, payload) {
   }
   broadcast();
   return true;
+}
+
+// Validate one question from the editor; returns a clean copy or null.
+function sanitizeQuestion(entry) {
+  if (!entry || typeof entry.q !== 'string' || !Array.isArray(entry.a)) return null;
+  const q = entry.q.trim().slice(0, 300);
+  const a = entry.a.slice(0, 4).map((x) => String(x).trim().slice(0, 120));
+  const correct = entry.correct | 0;
+  if (!q || a.length !== 4 || a.some((x) => !x) || correct < 0 || correct > 3) return null;
+  return { q, a, correct };
 }
 
 function generateAudienceVotes() {

@@ -152,7 +152,8 @@ function cues(s) {
   if (s.revealStage === 'revealed' && prev.revealStage !== 'revealed') {
     const q = s.questions[s.questionIndex];
     const isFinal = s.questionIndex === s.questions.length - 1;
-    if (s.lockedAnswer === q.correct) Sound.play(isFinal ? 'win' : 'correct');
+    if (s.lockedAnswer === null) Sound.play('reveal'); // walk-away peek, no verdict
+    else if (s.lockedAnswer === q.correct) Sound.play(isFinal ? 'win' : 'correct');
     else Sound.play('wrong');
   }
   const ll = s.lifelines, pll = prev.lifelines || {};

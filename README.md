@@ -48,14 +48,21 @@ and WebP all work — keep the name `logo.png`.)
 - **🔒 Lock In** — locks the choice (pulsing) with a suspense sound.
 - **Reveal Answer** — builds suspense: a dramatic pause, then the answer
   flashes **green** if correct (and stays green) or **red** for a few seconds
-  if wrong before the Game Over screen drops. The final question shows the big
-  win banner.
-- **Walk Away** — the contestant takes their guaranteed money.
+  if wrong before the Game Over screen drops. Correct answers pop a
+  **CORRECT!** banner with the new amount (hit **Next** to continue); the
+  final question shows the big win banner.
+- **Walk Away** — the contestant takes their guaranteed money. The correct
+  answer is revealed in green for the room (hit **Clear Overlay** to show it).
 - **Next ▶ / ◀ Prev** — move through the prize ladder.
 - **Reset** — start over from $100.
 
+**Keyboard shortcuts** (host screen): **A–D** or **1–4** pick an answer,
+**Q** reveal question, **Space** reveal next answer, **L** lock in,
+**R** reveal result, **N**/**P** next/previous question.
+
 ### Lifelines
-- **50:50** — removes two wrong answers on both screens.
+- **50:50** — removes two wrong answers on both screens. (Not available once
+  an answer is locked in — like the show.)
 - **☎ Phone a Friend** — launches a 30-second countdown on the contestant screen.
 - **👥 Ask the Audience** — three ways to run it:
   - **auto** — realistic computer-generated numbers.
