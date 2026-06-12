@@ -152,7 +152,7 @@ function renderQTimer(s) {
     count.textContent = left;
     el.classList.toggle('low', left > 0 && left <= 5);
     el.classList.toggle('zero', left === 0);
-    if (st.qtimer && st.qtimer.running) {
+    if (st.qtimer.running) {
       if (left > 0 && left <= 5 && left !== qTimerLastSec) Sound.play('tick');
       if (left === 0 && !qTimerBuzzed) { qTimerBuzzed = true; Sound.play('timeup'); }
     }

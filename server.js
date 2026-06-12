@@ -152,6 +152,12 @@ function pauseQuestionTimer() {
   t.endsAt = null;
 }
 
+// An answer is locked in or the reveal is underway — no more changes to
+// the choice, the clock, or the options.
+function answerFrozen() {
+  return state.lockedAnswer !== null || state.revealStage !== 'none';
+}
+
 // Tally live ballots into [countA, countB, countC, countD]
 function tallyVotes(ballots) {
   const counts = [0, 0, 0, 0];
@@ -257,6 +263,10 @@ function handleAction(type, payload) {
   if (['start_game', 'reset_game', 'goto_question', 'next_question',
        'prev_question', 'skip_player', 'walk_away'].includes(type)) {
     cancelReveal();
+  }
+  // The answer clock holds while a lifeline takes the stage; host resumes it.
+  if (['use_phone', 'use_audience', 'set_audience_votes', 'open_vote'].includes(type)) {
+    pauseQuestionTimer();
   }
   switch (type) {
     case 'start_game':
@@ -380,8 +390,7 @@ function handleAction(type, payload) {
 
     case 'resume_timer': {
       const t = state.qtimer;
-      if (!t.running && t.duration !== null && t.remaining > 0
-          && state.lockedAnswer === null && state.revealStage === 'none') {
+      if (!t.running && t.duration !== null && t.remaining > 0 && !answerFrozen()) {
         t.running = true;
         t.endsAt = Date.now() + t.remaining * 1000;
       }
@@ -389,10 +398,7 @@ function handleAction(type, payload) {
     }
 
     case 'restart_timer':
-      if (state.answersRevealed === 4 && state.lockedAnswer === null
-          && state.revealStage === 'none') {
-        startQuestionTimer();
-      }
+      if (state.answersRevealed === 4 && !answerFrozen()) startQuestionTimer();
       break;
 
     case 'reveal_result': {
@@ -458,7 +464,7 @@ function handleAction(type, payload) {
       if (state.lifelines.fifty) break;
       // No 50:50 once an answer is locked or the reveal has started — it
       // could remove the very answer that's pulsing on the big screen.
-      if (state.lockedAnswer !== null || state.revealStage !== 'none') break;
+      if (answerFrozen()) break;
       state.lifelines.fifty = true;
       const correctIdx = questions[state.questionIndex].correct;
       const wrong = [0, 1, 2, 3].filter((i) => i !== correctIdx);
@@ -476,7 +482,6 @@ function handleAction(type, payload) {
     case 'use_phone': {
       if (state.lifelines.phone) break;
       state.lifelines.phone = true;
-      pauseQuestionTimer(); // clock holds during the lifeline; host resumes
       const duration = Math.max(5, Math.min(300, (payload.duration | 0) || 30));
       state.phone = {
         active: true,
@@ -493,13 +498,11 @@ function handleAction(type, payload) {
     case 'use_audience':
       if (state.lifelines.audience) break;
       state.lifelines.audience = true;
-      pauseQuestionTimer();
       state.audience = { visible: true, votes: payload.votes || generateAudienceVotes() };
       break;
 
     case 'set_audience_votes':
       state.lifelines.audience = true;
-      pauseQuestionTimer();
       state.audience.votes = payload.votes;
       state.audience.visible = true;
       break;
@@ -511,7 +514,6 @@ function handleAction(type, payload) {
     // ---- Live phone voting (Ask the Audience) ----
     case 'open_vote':
       state.lifelines.audience = true;
-      pauseQuestionTimer();
       state.vote = { open: true, ballots: {} };
       state.audience = { visible: true, votes: [0, 0, 0, 0] }; // chart fills live
       break;

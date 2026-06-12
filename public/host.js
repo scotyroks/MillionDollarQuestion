@@ -64,11 +64,13 @@ function render(s) {
   $('btnResult').disabled = s.lockedAnswer === null || s.revealStage !== 'none';
   $('btnResult').textContent = s.revealStage === 'suspense' ? 'Revealing…' : 'Reveal Answer';
   // Lifeline cards: disable the "use" action once spent, and flip the badge.
+  // Lock-in / reveal freezes both the answer clock and 50:50.
   const used = s.lifelines;
+  const clockFrozen = s.lockedAnswer !== null || s.revealStage !== 'none';
   setLifelineCard('5050', used.fifty);
   setLifelineCard('Phone', used.phone);
   setLifelineCard('Audience', used.audience);
-  $('btn5050').disabled = used.fifty || s.lockedAnswer !== null || s.revealStage !== 'none';
+  $('btn5050').disabled = used.fifty || clockFrozen;
   $('btnPhone').disabled = used.phone;
   $('btnPhoneStop').disabled = !(s.phone && s.phone.active);
 
@@ -100,7 +102,6 @@ function render(s) {
 
   // Answer clock controls
   const t = s.qtimer || {};
-  const clockFrozen = s.lockedAnswer !== null || s.revealStage !== 'none';
   $('btnTimerPause').disabled = !t.running;
   $('btnTimerResume').disabled = t.running || t.duration === null || !t.remaining || clockFrozen;
   $('btnTimerRestart').disabled = s.answersRevealed < 4 || clockFrozen;
@@ -141,7 +142,10 @@ function wire() {
   $('btnTimerPause').onclick = () => Game.action('pause_timer');
   $('btnTimerResume').onclick = () => Game.action('resume_timer');
   $('btnTimerRestart').onclick = () => Game.action('restart_timer');
-  setInterval(updateTimerReadout, 250); // keep the readout ticking between broadcasts
+  // Tick the readout between broadcasts; render() covers paused/idle states.
+  setInterval(() => {
+    if (Game.state && Game.state.qtimer && Game.state.qtimer.running) updateTimerReadout();
+  }, 250);
 
   // Live phone voting
   $('btnOpenVote').onclick = () => { Sound.play('lifeline'); Game.action('open_vote'); };
