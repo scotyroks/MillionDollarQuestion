@@ -332,8 +332,12 @@ export function IntroScreen() {
   return (
     <div className="screen">
       <div className="screen-logo">
-        <div className="sl-name">FINAL ANSWER</div>
-        <div className="sl-sub">Play for a Million</div>
+        <div className="sl-name">
+          <span>MILLION</span>
+          <span>DOLLAR</span>
+          <span className="sl-q">QUESTION</span>
+        </div>
+        <div className="sl-sub">Game Night</div>
       </div>
       <div className="screen-tag">
         Fifteen questions stand between the hot seat and one million dollars.

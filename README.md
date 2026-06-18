@@ -2,8 +2,7 @@
 
 A two-screen controller for hosting your own *Million Dollar Question* trivia night.
 One screen faces the **host** (control panel), the other faces the **contestant /
-the room** (the big dramatic *“Final Answer”* broadcast display). State syncs
-live between them.
+the room** (the big dramatic broadcast display). State syncs live between them.
 
 The **server is pure Node.js, zero dependencies**. The **contestant display** is
 a cinematic React app (built with Vite), so it has a one-time build step.
@@ -43,8 +42,8 @@ a cinematic React app (built with Vite), so it has a one-time build step.
 To use a different port: `PORT=8080 node server.js`.
 
 ### Branding
-The contestant display uses the cinematic **“Final Answer”** wordmark built into
-the design — no image needed. The **host panel** still shows `public/logo.png`
+The contestant display uses a cinematic **“Million Dollar Question”** text
+wordmark built into the design — no image needed. The **host panel** still shows `public/logo.png`
 if you add one (PNG/JPG/WebP, keep the name `logo.png`); until then it falls back
 to a styled text title.
 

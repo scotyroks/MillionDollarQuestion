@@ -145,10 +145,10 @@ export default function App() {
           <div className="brand">
             <div className="b-top">
               <span className="b-diamond" />
-              <span className="b-name">FINAL ANSWER</span>
+              <span className="b-name">MILLION DOLLAR<br />QUESTION</span>
               <span className="b-diamond" />
             </div>
-            <div className="b-sub">Play for a Million</div>
+            <div className="b-sub">Game Night</div>
           </div>
           <HotSeat players={state.players || []} currentPlayer={state.currentPlayer} />
           <MoneyLadder state={state} />
