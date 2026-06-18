@@ -2,3 +2,6 @@ node_modules/
 questions.json
 *.log
 .DS_Store
+
+# Built contestant display (run `npm run build` to regenerate)
+public/display-app/

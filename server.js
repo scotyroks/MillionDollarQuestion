@@ -508,6 +508,26 @@ const MIME = {
   '.gif': 'image/gif',
 };
 
+// The contestant display is a built React app (Vite). It lives under
+// public/display-app/. If it hasn't been built yet, show a clear hint instead
+// of a blank 404.
+const DISPLAY_INDEX = path.join(PUBLIC_DIR, 'display-app', 'index.html');
+
+function serveDisplay(res) {
+  fs.access(DISPLAY_INDEX, fs.constants.R_OK, (err) => {
+    if (err) {
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+      res.end(`<!doctype html><meta charset="utf-8"><title>Build the display</title>
+<body style="font-family:system-ui;background:#04122b;color:#eaf2ff;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;text-align:center">
+<div><h1 style="color:#f6cd5b">Contestant display not built yet</h1>
+<p>Run <code style="background:#0b3372;padding:2px 8px;border-radius:6px">npm install &amp;&amp; npm run build</code>, then reload this page.</p>
+<p style="color:#9fb6d8">The host panel at <a style="color:#f6cd5b" href="/host">/host</a> works without a build.</p></div></body>`);
+      return;
+    }
+    serveFile(res, DISPLAY_INDEX);
+  });
+}
+
 function serveFile(res, filePath) {
   fs.readFile(filePath, (err, content) => {
     if (err) {
@@ -584,7 +604,7 @@ const server = http.createServer((req, res) => {
 
   // Routes
   if (pathname === '/' || pathname === '/host') return serveFile(res, path.join(PUBLIC_DIR, 'host.html'));
-  if (pathname === '/display') return serveFile(res, path.join(PUBLIC_DIR, 'display.html'));
+  if (pathname === '/display') return serveDisplay(res);
   if (pathname === '/vote') return serveFile(res, path.join(PUBLIC_DIR, 'vote.html'));
 
   // Static files (sanitised)
