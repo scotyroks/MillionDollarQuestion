@@ -1,13 +1,25 @@
 {
   "name": "million-dollar-question",
-  "version": "1.0.0",
-  "description": "Who Wants to Be a Millionaire — two-screen game night controller (host + contestant). Zero dependencies.",
+  "version": "2.0.0",
+  "description": "Who Wants to Be a Millionaire — two-screen game night controller (host + contestant). Cinematic React display, zero-dependency Node server.",
   "main": "server.js",
+  "type": "commonjs",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
   },
   "engines": {
-    "node": ">=16"
+    "node": ">=18"
   },
-  "license": "MIT"
+  "license": "MIT",
+  "dependencies": {
+    "react": "18.3.1",
+    "react-dom": "18.3.1"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.3.4",
+    "vite": "^5.4.11"
+  }
 }

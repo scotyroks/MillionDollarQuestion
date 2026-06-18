@@ -2,22 +2,32 @@
 
 A two-screen controller for hosting your own *Million Dollar Question* trivia night.
 One screen faces the **host** (control panel), the other faces the **contestant /
-the room** (the big dramatic display). State syncs live between them.
+the room** (the big dramatic *“Final Answer”* broadcast display). State syncs
+live between them.
 
-**Zero dependencies.** Pure Node.js — nothing to install.
+The **server is pure Node.js, zero dependencies**. The **contestant display** is
+a cinematic React app (built with Vite), so it has a one-time build step.
 
 ---
 
 ## Quick start
 
-1. Make sure you have **Node.js 16+** installed.
-2. From this folder, run:
+1. Make sure you have **Node.js 18+** installed.
+2. From this folder, install dependencies and build the contestant display
+   (one time, or whenever you change the display source):
 
    ```bash
-   node server.js
+   npm install
+   npm run build
    ```
 
-3. The terminal prints two URLs, for example:
+3. Start the server:
+
+   ```bash
+   npm start          # or: node server.js
+   ```
+
+   The terminal prints the URLs, for example:
 
    ```
    Host screen     : http://192.168.1.20:3000/host
@@ -32,11 +42,11 @@ the room** (the big dramatic display). State syncs live between them.
 
 To use a different port: `PORT=8080 node server.js`.
 
-### Adding the logo
-Save your logo image as **`public/logo.png`** and it appears automatically on
-the intro screen, the corner during play, and the host panel. Until you add it,
-a styled gold-and-emerald text version of the title is shown instead. (PNG, JPG,
-and WebP all work — keep the name `logo.png`.)
+### Branding
+The contestant display uses the cinematic **“Final Answer”** wordmark built into
+the design — no image needed. The **host panel** still shows `public/logo.png`
+if you add one (PNG/JPG/WebP, keep the name `logo.png`); until then it falls back
+to a styled text title.
 
 ---
 
@@ -100,16 +110,36 @@ Changes are saved to `questions.json` and persist between runs.
 
 | Part | Detail |
 |------|--------|
-| Server | `server.js` — pure Node `http`, holds game state |
+| Server | `server.js` — pure Node `http`, holds game state, zero dependencies |
 | Sync | Server-Sent Events (`/events`) push state; host posts to `/action` |
-| Host UI | `public/host.html` + `host.js` |
-| Display UI | `public/display.html` + `display.js` |
+| Host UI | `public/host.html` + `host.js` (plain JS) |
+| Display UI | React app in `client/` (Vite) — a pure renderer of server state. Built to `public/display-app/` and served at `/display` |
 | Audience phones | `public/vote.html` polls the sanitised `/poll` endpoint |
-| Audio | Synthesized via Web Audio (`common.js`) — no copyrighted files |
+| Audio | Synthesized via Web Audio — host page `common.js`, display `client/src/audio.js`. No copyrighted files |
 | Questions | `questions.json` (auto-created from a built-in sample set) |
+
+The contestant display is **non-interactive** — every transition (reveal
+question, reveal answers, highlight, lock, reveal result, lifelines, hot-seat
+changes) is driven by the host panel and pushed over SSE. The design comes from
+the *“Final Answer”* Claude Design handoff, reimplemented to render this
+project’s live game state.
 
 The prize ladder is the classic 15-step ladder with safe havens at
 **$1,000** and **$32,000**.
+
+### Display source layout (`client/`)
+
+| File | Role |
+|------|------|
+| `client/index.html` | Vite entry; loads fonts + the React bundle |
+| `client/src/App.jsx` | Maps server state → cinematic layout, audio cues, stage scaler |
+| `client/src/components.jsx` | Lifelines, ladder, hex question/answer plates, modals, end screens |
+| `client/src/useGameState.js` | Subscribes to the `/events` SSE stream |
+| `client/src/audio.js` | Procedural Web Audio cues + mute |
+| `client/src/styles.css` | Tokens, hexagon plates, animations |
+
+Build with `npm run build` (outputs to `public/display-app/`, which is
+git-ignored). Develop with `npm run dev`.
 
 ---
 
