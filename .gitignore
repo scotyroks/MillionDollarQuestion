@@ -1,4 +1,6 @@
 node_modules/
 questions.json
+questions.json.tmp
+.host-key
 *.log
 .DS_Store

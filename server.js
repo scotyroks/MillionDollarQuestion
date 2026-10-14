@@ -1,499 +1,107 @@
 /*
- * Who Wants to Be a Millionaire — game night server
+ * Million Dollar Question — game night server
  * Pure Node.js, zero dependencies. Run with: node server.js
  *
- * Sync model:
- *   - GET  /events   -> Server-Sent Events stream, pushes full game state
- *   - POST /action   -> { type, payload } mutates state, broadcasts to all
- *   - Questions persist to questions.json
+ *   /host     control panel (needs the host key, or open it on this computer)
+ *   /display  big screen for the contestant / room
+ *   /vote     audience phones for Ask the Audience
  *
- * Two screens:
- *   - /host     control panel (faces the host)
- *   - /display  big screen     (faces the contestant / room)
+ * Sync: each screen holds a Server-Sent Events stream (/events?role=…) that
+ * only ever carries what that screen may see. The host drives the game with
+ * POST /action; phones can only POST /vote.
  */
 
 const http = require('http');
 const fs = require('fs');
+const os = require('os');
 const path = require('path');
+const crypto = require('crypto');
+const { createGame } = require('./lib/game');
+const { loadQuestions, saveQuestions } = require('./lib/questions');
+const qr = require('./lib/qr');
 
-const PORT = process.env.PORT || 3000;
+const PORT = Number(process.env.PORT) || 3000;
 const PUBLIC_DIR = path.join(__dirname, 'public');
-const QUESTIONS_FILE = path.join(__dirname, 'questions.json');
+const QUESTIONS_FILE = process.env.QUESTIONS_FILE || path.join(__dirname, 'questions.json');
+const KEY_FILE = path.join(__dirname, '.host-key');
+const MAX_BODY = 1e6;
 
-// Classic 15-step money ladder. Safe havens at index 4 and 9.
-const LADDER = [
-  100, 200, 300, 500, 1000,
-  2000, 4000, 8000, 16000, 32000,
-  64000, 125000, 250000, 500000, 1000000,
-];
-const SAFE_HAVENS = [4, 9]; // indexes guaranteed once passed
-
-// ---- Questions persistence -------------------------------------------------
-
-const SAMPLE_QUESTIONS = [
-  // $100 — trivial
-  { q: 'How many days are there in a week?',
-    a: ['Five', 'Six', 'Seven', 'Eight'], correct: 2 },
-  // $200 — very easy
-  { q: 'What colour do you get by mixing blue and yellow?',
-    a: ['Red', 'Green', 'Purple', 'Orange'], correct: 1 },
-  // $300 — easy
-  { q: 'Which animal is commonly known as "man\'s best friend"?',
-    a: ['Cat', 'Dog', 'Horse', 'Rabbit'], correct: 1 },
-  // $500 — easy
-  { q: 'How many sides does a triangle have?',
-    a: ['Two', 'Three', 'Four', 'Five'], correct: 1 },
-  // $1,000 (safe haven) — easy/medium
-  { q: 'What is the capital city of France?',
-    a: ['London', 'Berlin', 'Paris', 'Madrid'], correct: 2 },
-  // $2,000 — medium
-  { q: 'How many continents are there on Earth?',
-    a: ['Five', 'Six', 'Seven', 'Eight'], correct: 2 },
-  // $4,000 — medium
-  { q: 'Who wrote the play "Romeo and Juliet"?',
-    a: ['Charles Dickens', 'William Shakespeare', 'Jane Austen', 'Mark Twain'], correct: 1 },
-  // $8,000 — medium/hard
-  { q: 'Which element has the chemical symbol "Na"?',
-    a: ['Nitrogen', 'Sodium', 'Neon', 'Nickel'], correct: 1 },
-  // $16,000 — hard
-  { q: 'In which year did the Second World War end?',
-    a: ['1943', '1945', '1947', '1950'], correct: 1 },
-  // $32,000 (safe haven) — hard
-  { q: 'Who painted the ceiling of the Sistine Chapel?',
-    a: ['Leonardo da Vinci', 'Raphael', 'Michelangelo', 'Donatello'], correct: 2 },
-  // $64,000 — hard
-  { q: 'Which is the smallest country in the world by land area?',
-    a: ['Monaco', 'Nauru', 'Vatican City', 'San Marino'], correct: 2 },
-  // $125,000 — very hard
-  { q: 'Which classic novel opens with the line "Call me Ishmael"?',
-    a: ['Moby-Dick', 'The Great Gatsby', 'War and Peace', 'Ulysses'], correct: 0 },
-  // $250,000 — very hard
-  { q: 'What is the chemical symbol for the element tungsten?',
-    a: ['W', 'Tu', 'Tg', 'Tn'], correct: 0 },
-  // $500,000 — extremely hard
-  { q: 'In which year was the Magna Carta sealed by King John of England?',
-    a: ['1066', '1215', '1314', '1492'], correct: 1 },
-  // $1,000,000 — million-dollar obscurity
-  { q: 'Who was the Roman emperor when Mount Vesuvius erupted and buried Pompeii in 79 AD?',
-    a: ['Nero', 'Titus', 'Augustus', 'Hadrian'], correct: 1 },
-];
-
-function loadQuestions() {
+// ---- Host key --------------------------------------------------------------
+// Keeps phones on the same Wi-Fi from driving the game. Set HOST_KEY to choose
+// your own; otherwise one is generated once and remembered in .host-key.
+function loadHostKey() {
+  if (process.env.HOST_KEY) return process.env.HOST_KEY.trim();
   try {
-    const raw = fs.readFileSync(QUESTIONS_FILE, 'utf8');
-    const parsed = JSON.parse(raw);
-    if (Array.isArray(parsed) && parsed.length) return parsed;
-  } catch (_) { /* fall through to sample */ }
-  saveQuestions(SAMPLE_QUESTIONS);
-  return SAMPLE_QUESTIONS.slice();
+    const saved = fs.readFileSync(KEY_FILE, 'utf8').trim();
+    if (saved) return saved;
+  } catch (_) { /* first run */ }
+  const alphabet = 'abcdefghjkmnpqrstuvwxyz23456789'; // no look-alike characters
+  const key = Array.from(crypto.randomBytes(6), (b) => alphabet[b % alphabet.length]).join('');
+  try { fs.writeFileSync(KEY_FILE, key + '\n'); } catch (_) { /* still works for this run */ }
+  return key;
+}
+const HOST_KEY = loadHostKey();
+
+function isLoopback(req) {
+  const addr = req.socket.remoteAddress || '';
+  return addr === '127.0.0.1' || addr === '::1' || addr === '::ffff:127.0.0.1';
 }
 
-function saveQuestions(questions) {
-  try {
-    fs.writeFileSync(QUESTIONS_FILE, JSON.stringify(questions, null, 2));
-  } catch (err) {
-    console.error('Could not save questions:', err.message);
+function keyMatches(given) {
+  const a = Buffer.from(String(given || ''));
+  const b = Buffer.from(HOST_KEY);
+  return a.length === b.length && crypto.timingSafeEqual(a, b);
+}
+
+function isHost(req, url) {
+  return isLoopback(req) || keyMatches(req.headers['x-host-key'] || url.searchParams.get('key'));
+}
+
+// ---- Network address -------------------------------------------------------
+function lanAddress() {
+  const candidates = [];
+  for (const list of Object.values(os.networkInterfaces())) {
+    for (const net of list || []) {
+      if (net.family === 'IPv4' && !net.internal) candidates.push(net.address);
+    }
   }
+  // Prefer typical home-network ranges over VPN / container adapters.
+  return candidates.find((a) => /^(192\.168|10\.|172\.(1[6-9]|2\d|3[01]))\./.test(a))
+    || candidates[0] || 'localhost';
+}
+const BASE_URL = `http://${lanAddress()}:${PORT}`;
+const VOTE_URL = `${BASE_URL}/vote`;
+const VOTE_QR = qr.toSvg(VOTE_URL);
+
+// ---- Game + live clients ---------------------------------------------------
+const clients = new Set(); // { res, role }
+let broadcastQueued = false;
+
+function sendEvent(res, payload) {
+  try { res.write(`data: ${JSON.stringify(payload)}\n\n`); } catch (_) { /* dropped */ }
 }
 
-// ---- Game state ------------------------------------------------------------
-
-let questions = loadQuestions();
-
-// Player roster for the hot seat. Persists across game resets / question changes.
-let players = []; // array of names; the one at state.currentPlayer is in the hot seat
-
-function freshPerQuestion() {
-  return {
-    questionVisible: false,
-    answersRevealed: 0,   // how many answers (0-4) are shown on the big screen
-    selectedAnswer: null, // host highlight (orange), letter index 0-3
-    lockedAnswer: null,   // locked in (pulsing), letter index 0-3
-    resultRevealed: false,
-    revealStage: 'none',  // 'none' | 'suspense' | 'revealed' — drives the dramatic reveal
-    removedAnswers: [],   // 50:50 removed option indexes
-    audience: { visible: false, votes: [0, 0, 0, 0] },
-    phone: { active: false, endsAt: null, duration: 30 },
-    vote: { open: false, ballots: {} }, // live phone voting: voterId -> choice index
-  };
-}
-
-// Tally live ballots into [countA, countB, countC, countD]
-function tallyVotes(ballots) {
-  const counts = [0, 0, 0, 0];
-  for (const choice of Object.values(ballots)) {
-    if (choice >= 0 && choice < 4) counts[choice]++;
-  }
-  return counts;
-}
-
-// Convert raw counts into whole-number percentages summing to 100
-function votesToPercents(counts) {
-  const total = counts.reduce((a, b) => a + b, 0);
-  if (!total) return [0, 0, 0, 0];
-  const raw = counts.map((c) => (c / total) * 100);
-  const floored = raw.map(Math.floor);
-  let remainder = 100 - floored.reduce((a, b) => a + b, 0);
-  // Hand out leftover points to the largest fractional parts
-  const order = raw
-    .map((v, i) => ({ i, frac: v - Math.floor(v) }))
-    .sort((a, b) => b.frac - a.frac);
-  for (let k = 0; k < order.length && remainder > 0; k++) {
-    floored[order[k].i]++;
-    remainder--;
-  }
-  return floored;
-}
-
-function freshGame() {
-  return Object.assign({
-    phase: 'idle',          // 'idle' (intro) | 'playing' | 'won' | 'lost' | 'walked'
-    questionIndex: 0,
-    currentPlayer: 0,       // index into the players roster (the hot seat)
-    lifelines: { fifty: false, phone: false, audience: false }, // true = used up
-    banner: null,           // { kind: 'win'|'lose'|'walk', amount }
-  }, freshPerQuestion());
-}
-
-let state = freshGame();
-
-function ladderInfo() {
-  return { ladder: LADDER, safeHavens: SAFE_HAVENS };
-}
-
-function guaranteedAmount(index) {
-  // Highest safe haven strictly below the current index
-  let amount = 0;
-  for (const h of SAFE_HAVENS) {
-    if (h < index) amount = LADDER[h];
-  }
-  return amount;
-}
-
-function fullState() {
-  const counts = tallyVotes(state.vote.ballots);
-  return {
-    ...state,
-    questions,
-    players,
-    ...ladderInfo(),
-    voteCounts: counts,
-    voteTotal: counts.reduce((a, b) => a + b, 0),
-    serverTime: Date.now(),
-  };
-}
-
-// ---- SSE clients -----------------------------------------------------------
-
-const clients = new Set();
-
+// Coalesce bursts (e.g. many phones voting at once) into one push per tick.
 function broadcast() {
-  const data = `data: ${JSON.stringify(fullState())}\n\n`;
-  for (const res of clients) {
-    try { res.write(data); } catch (_) { /* dropped */ }
-  }
+  if (broadcastQueued) return;
+  broadcastQueued = true;
+  setImmediate(() => {
+    broadcastQueued = false;
+    const views = {};
+    for (const c of clients) {
+      views[c.role] = views[c.role] || game.view(c.role);
+      sendEvent(c.res, views[c.role]);
+    }
+  });
 }
 
-// ---- Dramatic reveal timing ------------------------------------------------
-// reveal_result plays out over a few stages on timers. A token lets any new
-// reveal or question change cancel pending steps so stale ones never fire.
-const SUSPENSE_MS = 2500; // pause after "Reveal Answer" before colours show
-const WRONG_HOLD_MS = 3200; // red flash time before the Game Over screen
-let revealToken = 0;
-let revealTimers = [];
+const game = createGame({
+  questions: loadQuestions(QUESTIONS_FILE),
+  onChange: broadcast,
+  onQuestions: (questions) => saveQuestions(QUESTIONS_FILE, questions),
+});
 
-function cancelReveal() {
-  revealToken++;
-  revealTimers.forEach(clearTimeout);
-  revealTimers = [];
-}
-
-function laterReveal(token, ms, fn) {
-  revealTimers.push(setTimeout(() => {
-    if (token !== revealToken) return; // superseded
-    fn();
-    broadcast();
-  }, ms));
-}
-
-// ---- Actions ---------------------------------------------------------------
-
-function handleAction(type, payload) {
-  // Any of these navigations should cancel a reveal that's mid-animation.
-  if (['start_game', 'reset_game', 'goto_question', 'next_question',
-       'prev_question', 'skip_player', 'walk_away'].includes(type)) {
-    cancelReveal();
-  }
-  switch (type) {
-    case 'start_game':
-      state = freshGame();
-      state.phase = 'playing';
-      break;
-
-    case 'reset_game':
-      state = freshGame();
-      break;
-
-    case 'goto_question': {
-      const idx = Math.max(0, Math.min(questions.length - 1, payload.index | 0));
-      Object.assign(state, freshPerQuestion());
-      state.questionIndex = idx;
-      state.phase = 'playing';
-      state.banner = null;
-      break;
-    }
-
-    case 'next_question': {
-      const idx = Math.min(questions.length - 1, state.questionIndex + 1);
-      Object.assign(state, freshPerQuestion());
-      state.questionIndex = idx;
-      state.banner = null;
-      break;
-    }
-
-    case 'prev_question': {
-      const idx = Math.max(0, state.questionIndex - 1);
-      Object.assign(state, freshPerQuestion());
-      state.questionIndex = idx;
-      state.banner = null;
-      break;
-    }
-
-    // ---- Hot seat / players ----
-    case 'add_player': {
-      const name = (payload.name || '').trim().slice(0, 40);
-      if (name) players.push(name);
-      break;
-    }
-
-    case 'remove_player': {
-      const i = payload.index | 0;
-      if (i >= 0 && i < players.length) {
-        players.splice(i, 1);
-        if (state.currentPlayer >= players.length) {
-          state.currentPlayer = Math.max(0, players.length - 1);
-        }
-      }
-      break;
-    }
-
-    case 'set_players':
-      if (Array.isArray(payload.players)) {
-        players = payload.players.map((n) => String(n).trim().slice(0, 40)).filter(Boolean);
-        if (state.currentPlayer >= players.length) state.currentPlayer = 0;
-      }
-      break;
-
-    case 'set_hot_seat': {
-      const i = payload.index | 0;
-      if (i >= 0 && i < players.length) state.currentPlayer = i;
-      break;
-    }
-
-    case 'skip_player': {
-      // Current player passes; the next player takes the seat and faces the
-      // SAME question at the same prize level. Reset only the answer attempt.
-      if (players.length > 0) {
-        state.currentPlayer = (state.currentPlayer + 1) % players.length;
-      }
-      state.selectedAnswer = null;
-      state.lockedAnswer = null;
-      state.resultRevealed = false;
-      state.revealStage = 'none';
-      state.banner = null;
-      state.phase = 'playing';
-      break;
-    }
-
-    case 'reveal_question':
-      state.questionVisible = true;
-      break;
-
-    case 'reveal_answers': // reveal the next answer
-      state.questionVisible = true;
-      if (state.answersRevealed < 4) state.answersRevealed++;
-      break;
-
-    case 'reveal_all_answers':
-      state.questionVisible = true;
-      state.answersRevealed = 4;
-      break;
-
-    case 'select_answer':
-      if (!state.resultRevealed) state.selectedAnswer = payload.index;
-      break;
-
-    case 'lock_answer':
-      if (state.selectedAnswer !== null && !state.resultRevealed) {
-        state.lockedAnswer = state.selectedAnswer;
-      }
-      break;
-
-    case 'reveal_result': {
-      if (state.lockedAnswer === null || state.revealStage !== 'none') break;
-      cancelReveal();
-      const token = revealToken;
-      const qIdx = state.questionIndex;
-      const isCorrect = state.lockedAnswer === questions[qIdx].correct;
-      const isFinal = qIdx === questions.length - 1;
-
-      // Stage 1 — suspense: locked answer holds, no colours yet.
-      state.revealStage = 'suspense';
-      state.resultRevealed = false;
-      state.banner = null;
-
-      // Stage 2 — after a pause, reveal colours (green correct / red wrong).
-      laterReveal(token, SUSPENSE_MS, () => {
-        state.revealStage = 'revealed';
-        state.resultRevealed = true;
-      });
-
-      // Stage 3 — the outcome screen.
-      if (isCorrect && isFinal) {
-        // Big win banner shortly after the green flash.
-        laterReveal(token, SUSPENSE_MS + 1200, () => {
-          state.phase = 'won';
-          state.banner = { kind: 'win', amount: LADDER[qIdx] };
-        });
-      } else if (!isCorrect) {
-        // Hold the red flash, then drop the Game Over screen.
-        laterReveal(token, SUSPENSE_MS + WRONG_HOLD_MS, () => {
-          state.phase = 'lost';
-          state.banner = { kind: 'lose', amount: guaranteedAmount(qIdx) };
-        });
-      }
-      // Non-final correct answers just stay green — host advances with Next.
-      break;
-    }
-
-    case 'walk_away':
-      state.phase = 'walked';
-      state.resultRevealed = true;
-      state.banner = {
-        kind: 'walk',
-        amount: state.questionIndex > 0 ? LADDER[state.questionIndex - 1] : 0,
-      };
-      break;
-
-    case 'clear_banner':
-      state.banner = null;
-      break;
-
-    case 'use_fifty': {
-      if (state.lifelines.fifty) break;
-      state.lifelines.fifty = true;
-      const correctIdx = questions[state.questionIndex].correct;
-      const wrong = [0, 1, 2, 3].filter((i) => i !== correctIdx);
-      // shuffle wrong, keep two removed
-      for (let i = wrong.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [wrong[i], wrong[j]] = [wrong[j], wrong[i]];
-      }
-      state.removedAnswers = wrong.slice(0, 2);
-      break;
-    }
-
-    case 'use_phone':
-      if (state.lifelines.phone) break;
-      state.lifelines.phone = true;
-      state.phone = {
-        active: true,
-        duration: payload.duration || 30,
-        endsAt: Date.now() + (payload.duration || 30) * 1000,
-      };
-      break;
-
-    case 'stop_phone':
-      state.phone.active = false;
-      break;
-
-    case 'use_audience':
-      if (state.lifelines.audience) break;
-      state.lifelines.audience = true;
-      state.audience = { visible: true, votes: payload.votes || generateAudienceVotes() };
-      break;
-
-    case 'set_audience_votes':
-      state.lifelines.audience = true;
-      state.audience.votes = payload.votes;
-      state.audience.visible = true;
-      break;
-
-    case 'hide_audience':
-      state.audience.visible = false;
-      break;
-
-    // ---- Live phone voting (Ask the Audience) ----
-    case 'open_vote':
-      state.lifelines.audience = true;
-      state.vote = { open: true, ballots: {} };
-      state.audience = { visible: true, votes: [0, 0, 0, 0] }; // chart fills live
-      break;
-
-    case 'close_vote':
-      state.vote.open = false;
-      state.audience.visible = true;
-      state.audience.votes = votesToPercents(tallyVotes(state.vote.ballots));
-      break;
-
-    case 'cast_vote': {
-      // From an audience phone. Only counts while voting is open.
-      if (!state.vote.open) break;
-      const { voterId } = payload;
-      const choice = payload.choice | 0;
-      if (!voterId || choice < 0 || choice > 3) break;
-      if (state.removedAnswers.includes(choice)) break; // can't vote a 50:50'd option
-      state.vote.ballots[voterId] = choice;
-      // Keep the live chart in sync as votes arrive
-      if (state.audience.visible) {
-        state.audience.votes = votesToPercents(tallyVotes(state.vote.ballots));
-      }
-      break;
-    }
-
-    case 'reset_vote':
-      state.vote = { open: false, ballots: {} };
-      break;
-
-    case 'update_questions':
-      if (Array.isArray(payload.questions)) {
-        questions = payload.questions;
-        saveQuestions(questions);
-        if (state.questionIndex >= questions.length) {
-          state.questionIndex = Math.max(0, questions.length - 1);
-        }
-      }
-      break;
-
-    default:
-      return false;
-  }
-  broadcast();
-  return true;
-}
-
-function generateAudienceVotes() {
-  // Plausible audience lean toward the correct answer
-  const correctIdx = questions[state.questionIndex].correct;
-  const votes = [0, 0, 0, 0];
-  let remaining = 100;
-  const main = 45 + Math.floor(Math.random() * 35); // 45-79
-  votes[correctIdx] = main;
-  remaining -= main;
-  const others = [0, 1, 2, 3].filter((i) => i !== correctIdx);
-  for (let i = 0; i < others.length; i++) {
-    if (i === others.length - 1) votes[others[i]] = remaining;
-    else {
-      const v = Math.floor(Math.random() * (remaining + 1));
-      votes[others[i]] = v;
-      remaining -= v;
-    }
-  }
-  return votes;
-}
-
-// ---- HTTP server -----------------------------------------------------------
-
+// ---- HTTP helpers ----------------------------------------------------------
 const MIME = {
   '.html': 'text/html; charset=utf-8',
   '.js': 'text/javascript; charset=utf-8',
@@ -506,7 +114,13 @@ const MIME = {
   '.jpeg': 'image/jpeg',
   '.webp': 'image/webp',
   '.gif': 'image/gif',
+  '.webmanifest': 'application/manifest+json',
 };
+
+function sendJson(res, status, body) {
+  res.writeHead(status, { 'Content-Type': MIME['.json'], 'Cache-Control': 'no-store' });
+  res.end(JSON.stringify(body));
+}
 
 function serveFile(res, filePath) {
   fs.readFile(filePath, (err, content) => {
@@ -515,98 +129,116 @@ function serveFile(res, filePath) {
       res.end('Not found');
       return;
     }
-    const ext = path.extname(filePath).toLowerCase();
-    res.writeHead(200, { 'Content-Type': MIME[ext] || 'application/octet-stream' });
+    res.writeHead(200, {
+      'Content-Type': MIME[path.extname(filePath).toLowerCase()] || 'application/octet-stream',
+      'Cache-Control': 'no-cache', // always pick up edits on refresh
+    });
     res.end(content);
   });
 }
 
-const server = http.createServer((req, res) => {
-  const url = new URL(req.url, `http://${req.headers.host}`);
-  const pathname = url.pathname;
+function readJson(req, cb) {
+  let body = '';
+  let tooBig = false;
+  req.on('data', (chunk) => {
+    body += chunk;
+    if (body.length > MAX_BODY) { tooBig = true; req.destroy(); }
+  });
+  req.on('end', () => {
+    if (tooBig) return;
+    try { cb(null, JSON.parse(body || '{}')); } catch (err) { cb(err); }
+  });
+}
 
-  // SSE stream
+const PAGES = { '/': 'host.html', '/host': 'host.html', '/display': 'display.html', '/vote': 'vote.html' };
+
+// ---- Routes ----------------------------------------------------------------
+const server = http.createServer((req, res) => {
+  const url = new URL(req.url, 'http://localhost');
+  const { pathname } = url;
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+
   if (pathname === '/events' && req.method === 'GET') {
+    let role = url.searchParams.get('role');
+    if (!['host', 'display', 'audience'].includes(role)) role = 'audience';
+    if (role === 'host' && !isHost(req, url)) return sendJson(res, 401, { ok: false, error: 'host key required' });
     res.writeHead(200, {
       'Content-Type': 'text/event-stream',
       'Cache-Control': 'no-cache',
       Connection: 'keep-alive',
+      'X-Accel-Buffering': 'no',
     });
-    res.write(`data: ${JSON.stringify(fullState())}\n\n`);
-    clients.add(res);
-    const keepAlive = setInterval(() => {
-      try { res.write(': ping\n\n'); } catch (_) {}
-    }, 20000);
-    req.on('close', () => {
-      clearInterval(keepAlive);
-      clients.delete(res);
-    });
+    res.write('retry: 2000\n\n');
+    sendEvent(res, game.view(role));
+    const client = { res, role };
+    clients.add(client);
+    const keepAlive = setInterval(() => { try { res.write(': ping\n\n'); } catch (_) {} }, 20000);
+    req.on('close', () => { clearInterval(keepAlive); clients.delete(client); });
     return;
   }
 
-  // Actions
   if (pathname === '/action' && req.method === 'POST') {
-    let body = '';
-    req.on('data', (chunk) => {
-      body += chunk;
-      if (body.length > 1e6) req.destroy();
+    if (!isHost(req, url)) return sendJson(res, 401, { ok: false, error: 'host key required' });
+    return readJson(req, (err, body) => {
+      if (err) return sendJson(res, 400, { ok: false, error: 'invalid JSON' });
+      const result = game.dispatch(body.type, body.payload);
+      sendJson(res, result.ok ? 200 : 400, result);
     });
-    req.on('end', () => {
-      try {
-        const { type, payload } = JSON.parse(body || '{}');
-        const ok = handleAction(type, payload || {});
-        res.writeHead(ok ? 200 : 400, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ ok }));
-      } catch (err) {
-        res.writeHead(400, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ ok: false, error: err.message }));
-      }
+  }
+
+  if (pathname === '/vote' && req.method === 'POST') {
+    return readJson(req, (err, body) => {
+      if (err) return sendJson(res, 400, { ok: false, error: 'invalid JSON' });
+      const result = game.castVote(body.voterId, body.choice);
+      sendJson(res, result.ok ? 200 : 409, result);
     });
-    return;
   }
 
-  // Sanitised poll snapshot for audience phones (never exposes the correct answer)
-  if (pathname === '/poll' && req.method === 'GET') {
-    const q = questions[state.questionIndex];
-    const counts = tallyVotes(state.vote.ballots);
-    const snapshot = {
-      open: state.vote.open,
-      questionNumber: state.questionIndex + 1,
-      question: q ? q.q : '',
-      answers: q ? q.a : ['', '', '', ''],
-      removed: state.removedAnswers,
-      total: counts.reduce((a, b) => a + b, 0),
-    };
-    res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' });
-    res.end(JSON.stringify(snapshot));
-    return;
+  if (pathname === '/api/info' && req.method === 'GET') {
+    return sendJson(res, 200, {
+      voteUrl: VOTE_URL,
+      displayUrl: `${BASE_URL}/display`,
+      hostUrl: `${BASE_URL}/host?key=${isHost(req, url) ? HOST_KEY : ''}`,
+      isHost: isHost(req, url),
+    });
   }
 
-  // Routes
-  if (pathname === '/' || pathname === '/host') return serveFile(res, path.join(PUBLIC_DIR, 'host.html'));
-  if (pathname === '/display') return serveFile(res, path.join(PUBLIC_DIR, 'display.html'));
-  if (pathname === '/vote') return serveFile(res, path.join(PUBLIC_DIR, 'vote.html'));
-
-  // Static files (sanitised)
-  const safe = path.normalize(pathname).replace(/^(\.\.[/\\])+/, '');
-  const filePath = path.join(PUBLIC_DIR, safe);
-  if (!filePath.startsWith(PUBLIC_DIR)) {
-    res.writeHead(403); res.end('Forbidden'); return;
+  if (pathname === '/qr/vote.svg') {
+    res.writeHead(200, { 'Content-Type': MIME['.svg'], 'Cache-Control': 'no-cache' });
+    return res.end(VOTE_QR);
   }
-  serveFile(res, filePath);
+
+  if (req.method !== 'GET' && req.method !== 'HEAD') {
+    res.writeHead(405, { Allow: 'GET' });
+    return res.end();
+  }
+
+  if (PAGES[pathname]) return serveFile(res, path.join(PUBLIC_DIR, PAGES[pathname]));
+
+  // Static files, confined to public/
+  let decoded;
+  try { decoded = decodeURIComponent(pathname); } catch (_) { decoded = ''; }
+  const filePath = path.join(PUBLIC_DIR, path.normalize(decoded));
+  if (!decoded || !filePath.startsWith(PUBLIC_DIR + path.sep)) {
+    res.writeHead(403);
+    return res.end('Forbidden');
+  }
+  return serveFile(res, filePath);
+});
+
+server.on('error', (err) => {
+  if (err.code === 'EADDRINUSE') {
+    console.error(`\n  Port ${PORT} is already in use. Try: PORT=${PORT + 1} node server.js\n`);
+    process.exit(1);
+  }
+  throw err;
 });
 
 server.listen(PORT, () => {
-  const nets = require('os').networkInterfaces();
-  let lan = 'localhost';
-  for (const name of Object.keys(nets)) {
-    for (const net of nets[name]) {
-      if (net.family === 'IPv4' && !net.internal) { lan = net.address; break; }
-    }
-  }
-  console.log('\n  Million Dollar Question — game night\n');
-  console.log(`  Host screen     : http://${lan}:${PORT}/host`);
-  console.log(`  Contestant view : http://${lan}:${PORT}/display`);
-  console.log(`  Audience phones : http://${lan}:${PORT}/vote`);
-  console.log(`  (local)         : http://localhost:${PORT}/host\n`);
+  console.log('\n  💰 Million Dollar Question — game night\n');
+  console.log(`  Host controls   : ${BASE_URL}/host?key=${HOST_KEY}`);
+  console.log(`  Big screen      : ${BASE_URL}/display`);
+  console.log(`  Audience phones : ${VOTE_URL}`);
+  console.log(`\n  On this computer you can also use http://localhost:${PORT}/host (no key needed).`);
+  console.log('  Keep the host link to yourself — it lets a device run the game.\n');
 });
