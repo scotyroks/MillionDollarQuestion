@@ -3,80 +3,105 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Million Dollar Question — Contestant Screen</title>
+  <meta name="theme-color" content="#000000" />
+  <title>Million Dollar Question — Big Screen</title>
+  <link rel="icon" href="/favicon.svg" />
   <link rel="stylesheet" href="/style.css" />
   <style>
-    .stage { position: relative; display: grid; grid-template-columns: 1fr 230px; height: 100vh; padding: 20px; gap: 18px; z-index: 1; }
-    .main { display: flex; flex-direction: column; position: relative; z-index: 1; }
-    .top { flex: 1; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 30px; }
-    .play-area { width: 100%; display: flex; flex-direction: column; gap: 18px; margin-top: auto; }
-    .side { position: relative; z-index: 1; display: flex; flex-direction: column; justify-content: center; }
-    .lifelines { justify-content: center; margin-bottom: 14px; }
-    .hotseat { display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 14px; }
-    .hotseat .seat-icon { font-size: 22px; }
+    body { overflow: hidden; cursor: default; }
+    body.idle-cursor { cursor: none; }
+    .stage { position: relative; display: grid; grid-template-columns: 1fr minmax(200px, 250px); height: 100vh; padding: 24px; gap: 24px; z-index: 1; }
+    .main { display: flex; flex-direction: column; justify-content: flex-end; position: relative; min-width: 0; }
+    .side { display: flex; flex-direction: column; justify-content: center; }
+    .play-area { display: flex; flex-direction: column; gap: 18px; padding-bottom: 2vh; }
+    .topline { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+    .for-amount { color: var(--gold-soft); letter-spacing: 3px; text-transform: uppercase; font-size: clamp(12px, 1.3vw, 16px); }
+    .for-amount b { color: var(--gold); font-size: 1.6em; letter-spacing: 1px; margin-left: 8px; }
+
+    .hotseat { display: flex; align-items: center; gap: 12px; }
     .hotseat .seat-label { color: var(--gold-soft); text-transform: uppercase; letter-spacing: 3px; font-size: clamp(11px, 1.2vw, 14px); }
-    .hotseat .seat-name { color: var(--gold); font-weight: 800; font-size: clamp(18px, 2.4vw, 32px); text-shadow: 0 0 18px rgba(244,196,48,0.45); padding: 2px 18px; border-left: 2px solid rgba(212,175,55,0.4); }
+    .hotseat .seat-name { color: var(--gold); font-weight: 800; font-size: clamp(18px, 2.4vw, 32px); text-shadow: 0 0 18px rgba(244,196,48,0.45); padding-left: 14px; border-left: 2px solid rgba(212,175,55,0.4); }
     .seat-flash { animation: seatflash 0.7s ease; }
     @keyframes seatflash { 0% { transform: scale(0.9); opacity: 0; } 60% { transform: scale(1.08); } 100% { transform: scale(1); opacity: 1; } }
 
-    /* Intro / logo */
-    .intro { position: relative; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 18px; }
-    .intro .brand-logo img { max-height: 64vh; }
-    .intro .brand-logo .logo-fallback { font-size: clamp(40px, 8vw, 110px); }
-    .intro .brand-logo .logo-fallback .l3 { font-size: 0.82em; }
-    .intro .sub { color: var(--gold-soft); letter-spacing: 6px; text-transform: uppercase; font-size: clamp(12px, 1.4vw, 16px); }
+    .intro { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; text-align: center; }
+    .intro .brand-logo img { max-height: 62vh; }
+    .intro .brand-logo .logo-fallback { font-size: clamp(44px, 8vw, 120px); }
+    .intro .sub { color: var(--gold-soft); letter-spacing: 6px; text-transform: uppercase; font-size: clamp(12px, 1.4vw, 18px); }
+    .intro .players-line { color: #cfe9da; font-size: clamp(14px, 1.6vw, 20px); max-width: 70vw; }
     .intro-glow { animation: breathe 4s ease-in-out infinite; }
     @keyframes breathe { 0%,100% { filter: drop-shadow(0 0 18px rgba(244,196,48,0.25)); } 50% { filter: drop-shadow(0 0 40px rgba(244,196,48,0.55)); } }
 
-    /* small corner logo during play */
     .corner-logo { position: fixed; top: 14px; left: 18px; z-index: 5; opacity: 0.9; }
     .corner-logo img { height: 56px; width: auto; }
-    .corner-logo .logo-fallback { font-size: 16px; line-height: 0.95; text-align: left; }
+    .corner-logo .logo-fallback { font-size: 15px; }
 
-    .audience-overlay { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; background: rgba(0,0,0,0.92); z-index: 40; }
-    .audience-overlay.show { display: flex; }
-    .audience-panel { text-align: center; }
-    .audience-panel h2 { color: var(--gold); margin-bottom: 24px; letter-spacing: 1px; }
-    .phone-timer { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; flex-direction: column; background: rgba(0,0,0,0.92); z-index: 41; }
-    .phone-timer.show { display: flex; }
-    .phone-timer .count { font-size: 26vh; font-weight: 900; color: var(--gold); text-shadow: 0 0 50px rgba(244,196,48,0.7); }
-    .phone-timer .lbl { letter-spacing: 5px; text-transform: uppercase; color: var(--gold-soft); }
+    .audience-wrap { display: flex; gap: 48px; align-items: center; justify-content: center; flex-wrap: wrap; }
+    .audience-overlay h2 { color: var(--gold); letter-spacing: 1px; font-size: clamp(22px, 3vw, 40px); }
+    .vote-join { display: flex; flex-direction: column; align-items: center; gap: 10px; max-width: 280px; }
+    .vote-join img { width: min(26vh, 240px); height: auto; border-radius: 10px; border: 6px solid #fff; background: #fff; }
+    .vote-join .url { color: var(--gold-bright); font-weight: 700; font-size: clamp(14px, 1.6vw, 20px); word-break: break-all; }
+    .vote-join .count { color: var(--muted); }
+
+    .phone-ring { position: relative; width: min(52vh, 420px); aspect-ratio: 1; }
+    .phone-ring svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+    .phone-ring circle { fill: none; stroke-width: 6; }
+    .phone-ring .track { stroke: rgba(212,175,55,0.2); }
+    .phone-ring .prog { stroke: var(--gold); stroke-linecap: round; transition: stroke-dashoffset 0.25s linear, stroke 0.3s; }
+    .phone-ring.urgent .prog { stroke: var(--red); }
+    .phone-ring .count { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: min(22vh, 180px); font-weight: 900; color: var(--gold); text-shadow: 0 0 50px rgba(244,196,48,0.7); }
+    .phone-ring.urgent .count { color: #ff6b76; }
+    .overlay .lbl { letter-spacing: 5px; text-transform: uppercase; color: var(--gold-soft); font-size: clamp(14px, 1.6vw, 20px); }
+
+    .sound-hint { position: fixed; top: 14px; left: 50%; transform: translateX(-50%); z-index: 60; background: rgba(0,0,0,0.75); border: 1px solid var(--gold-soft); color: var(--gold-bright); padding: 10px 18px; border-radius: 30px; font-size: 14px; cursor: pointer; }
+    .screen-tools { position: fixed; bottom: 14px; right: 14px; z-index: 60; display: flex; gap: 8px; opacity: 0; transition: opacity 0.3s; }
+    body:not(.idle-cursor) .screen-tools { opacity: 0.85; }
+
+    .confetti { position: fixed; inset: 0; pointer-events: none; z-index: 51; overflow: hidden; }
+    .confetti i { position: absolute; top: -20px; width: 10px; height: 16px; opacity: 0.9; animation: fall linear forwards; }
+    @keyframes fall { to { transform: translateY(110vh) rotate(720deg); } }
+
+    @media (max-width: 760px) {
+      .stage { grid-template-columns: 1fr; grid-template-rows: 1fr auto; height: auto; min-height: 100vh; padding: 14px; }
+      body { overflow-y: auto; }
+      .side { display: none; }
+      .answers { grid-template-columns: 1fr; gap: 10px; }
+    }
   </style>
 </head>
 <body>
   <div class="sunburst"></div>
   <div class="connection" id="conn">● connecting…</div>
 
-  <!-- Small logo shown in the corner during play -->
-  <div class="corner-logo" id="cornerLogo" style="display:none;">
+  <div class="corner-logo hidden" id="cornerLogo">
     <span class="brand-logo">
-      <img src="/logo.png" alt="Million Dollar Question" onerror="this.style.display='none';this.nextElementSibling.style.display='block';" />
-      <span class="logo-fallback" style="display:none;"><span class="l1">MILLION</span> <span class="l2">DOLLAR</span> <span class="l3">QUESTION</span></span>
+      <img src="/logo.png" alt="Million Dollar Question" onerror="this.parentNode.classList.add('no-img')" />
+      <span class="logo-fallback"><span class="l1">Million</span><span class="l2">Dollar</span><span class="l3">Question</span></span>
     </span>
   </div>
 
   <div class="stage">
     <div class="main">
-      <div class="top">
-        <div class="intro" id="intro">
-          <span class="brand-logo intro-glow">
-            <img src="/logo.png" alt="Million Dollar Question" onerror="this.style.display='none';this.nextElementSibling.style.display='block';" />
-            <span class="logo-fallback" style="display:none;">
-              <span class="l1">MILLION</span><br/><span class="l2">DOLLAR</span><br/><span class="l3">QUESTION</span>
-            </span>
-          </span>
-          <div class="sub">Game Night</div>
-        </div>
-        <div class="play-area" id="playArea" style="display:none;">
-          <div class="hotseat" id="hotseat" style="display:none;">
-            <span class="seat-icon">🪑</span>
+      <div class="intro" id="intro">
+        <span class="brand-logo intro-glow">
+          <img src="/logo.png" alt="Million Dollar Question" onerror="this.parentNode.classList.add('no-img')" />
+          <span class="logo-fallback"><span class="l1">Million</span><span class="l2">Dollar</span><span class="l3">Question</span></span>
+        </span>
+        <div class="sub">Game Night</div>
+        <div class="players-line" id="introPlayers"></div>
+      </div>
+
+      <div class="play-area hidden" id="playArea">
+        <div class="topline">
+          <div class="hotseat hidden" id="hotseat">
             <span class="seat-label">In the hot seat</span>
             <span class="seat-name" id="seatName"></span>
           </div>
-          <div class="lifelines" id="lifelines"></div>
-          <div class="question-box" id="questionBox"></div>
-          <div class="answers" id="answers"></div>
+          <div class="lifelines" id="lifelines" aria-label="Lifelines"></div>
+          <div class="for-amount">Playing for <b id="forAmount"></b></div>
         </div>
+        <div class="question-box"><span class="qtext" id="questionText"></span></div>
+        <div class="answers" id="answers"></div>
       </div>
     </div>
     <div class="side">
@@ -84,24 +109,40 @@
     </div>
   </div>
 
-  <!-- Audience overlay -->
-  <div class="audience-overlay" id="audienceOverlay">
-    <div class="audience-panel">
-      <h2>Ask the Audience</h2>
+  <div class="overlay audience-overlay" id="audienceOverlay">
+    <h2 id="audienceTitle">Ask the Audience</h2>
+    <div class="audience-wrap">
       <div class="audience-chart" id="audienceChart"></div>
+      <div class="vote-join hidden" id="voteJoin">
+        <img src="/qr/vote.svg" alt="QR code for the voting page" />
+        <div class="url" id="voteUrl"></div>
+        <div class="count" id="voteCount"></div>
+      </div>
     </div>
   </div>
 
-  <!-- Phone timer -->
-  <div class="phone-timer" id="phoneTimer">
-    <div class="lbl">Phone a Friend</div>
-    <div class="count" id="phoneCount">30</div>
+  <div class="overlay" id="phoneOverlay">
+    <div class="lbl">☎ Phone a Friend</div>
+    <div class="phone-ring" id="phoneRing">
+      <svg viewBox="0 0 100 100" aria-hidden="true">
+        <circle class="track" cx="50" cy="50" r="45" />
+        <circle class="prog" id="phoneProg" cx="50" cy="50" r="45" />
+      </svg>
+      <div class="count" id="phoneCount">30</div>
+    </div>
   </div>
 
-  <!-- Result banner -->
-  <div class="banner" id="banner">
+  <div class="overlay banner" id="banner">
+    <div class="who" id="bannerWho"></div>
     <h1 id="bannerTitle"></h1>
+    <div class="lead" id="bannerLead"></div>
     <div class="amount" id="bannerAmount"></div>
+  </div>
+  <div class="confetti" id="confetti"></div>
+
+  <button class="sound-hint" id="soundHint">🔊 Click anywhere to turn on sound</button>
+  <div class="screen-tools">
+    <button class="ghost small" id="btnFullscreen" title="Fullscreen (F)">⛶ Fullscreen</button>
   </div>
 
   <script src="/common.js"></script>

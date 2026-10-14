@@ -3,263 +3,346 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Million Dollar Question — Host Control</title>
+  <meta name="theme-color" content="#000000" />
+  <title>Million Dollar Question — Host Controls</title>
+  <link rel="icon" href="/favicon.svg" />
   <link rel="stylesheet" href="/style.css" />
   <style>
     body { overflow-y: auto; }
-    .host { display: grid; grid-template-columns: 200px 1fr; gap: 16px; max-width: 1280px; margin: 0 auto; padding: 16px; }
-    .panel { background: rgba(6,40,26,0.55); border: 1px solid #1c6b46; border-radius: 12px; padding: 14px; }
-    h2 { font-size: 14px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--gold); margin-bottom: 10px; }
-    .ladder li { font-size: 13px; padding: 4px 10px; }
-    .host-brand { text-align:center; margin-bottom:12px; }
-    .host-brand img { max-width:100%; height:auto; }
-    .host-brand .logo-fallback { font-size: 18px; line-height: 1; }
+    .topbar { position: sticky; top: 0; z-index: 30; display: flex; align-items: center; gap: 12px; padding: 10px 16px; background: rgba(0,0,0,0.82); border-bottom: 1px solid var(--panel-line); backdrop-filter: blur(6px); flex-wrap: wrap; }
+    .topbar .brand { font-weight: 900; letter-spacing: 1px; color: var(--gold); text-transform: uppercase; font-size: 15px; }
+    .topbar .brand span { color: var(--emerald-bright); }
+    .phase { font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; padding: 3px 10px; border-radius: 12px; border: 1px solid var(--panel-line); color: var(--muted); }
+    .phase.playing { color: #56e6a0; border-color: rgba(22,193,114,0.6); }
+    .phase.won { color: var(--gold); border-color: var(--gold); }
+    .phase.lost { color: #ff8a93; border-color: var(--red); }
+    .phase.walked { color: var(--gold-bright); border-color: var(--gold-soft); }
+    .topbar .spacer { flex: 1; }
+    .topbar label { font-size: 13px; color: var(--muted); display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
+    .connection { position: static; }
 
-    .qstrip { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
-    .qstrip .meta { color: #6fcfa0; font-size: 13px; }
-    .qstrip .amt { color: var(--gold); font-weight: 700; }
+    .host { display: grid; grid-template-columns: 210px minmax(0, 1fr) 360px; gap: 16px; max-width: 1500px; margin: 0 auto; padding: 16px; align-items: start; }
+    .col { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+    .panel { background: var(--panel); border: 1px solid var(--panel-line); border-radius: var(--radius); padding: 14px; }
+    h2 { font-size: 13px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--gold); margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+    .small { font-size: 12px; color: var(--muted-2); }
+    .muted { color: var(--muted); }
+    .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
 
-    .hotseat-bar { text-align:center; padding: 8px 14px; margin-bottom: 12px; border-radius: 8px; background: rgba(244,196,48,0.08); border:1px solid rgba(212,175,55,0.4); color:#cfe9da; font-size:14px; }
+    .ladder li { font-size: 13px; padding: 4px 10px; cursor: pointer; }
+    .ladder li:hover:not(.current) { background: rgba(244,196,48,0.1); }
+    .ladder-note { margin-top: 8px; }
+
+    .qstrip { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+    .qstrip .meta { color: var(--muted-2); font-size: 14px; text-align: center; }
+    .qstrip .amt { color: var(--gold); font-weight: 800; font-size: 18px; }
+    .qstrip .safe-tag { font-size: 11px; color: var(--gold-bright); border: 1px solid var(--gold-soft); border-radius: 8px; padding: 1px 6px; margin-left: 6px; }
+
+    .hotseat-bar { text-align: center; padding: 8px 14px; margin-bottom: 12px; border-radius: 8px; background: rgba(244,196,48,0.08); border: 1px solid rgba(212,175,55,0.4); color: #cfe9da; font-size: 14px; }
     .hotseat-bar b { color: var(--gold); font-size: 16px; }
-    .hotseat-bar .next { color:#6fcfa0; margin-left: 12px; }
-    .hostq { font-size: 20px; text-align: center; padding: 16px; background: linear-gradient(180deg,#0a3522,#03160e); border:1px solid var(--rim); border-radius: 10px; margin-bottom: 14px; }
+    .hotseat-bar .next { color: var(--muted-2); margin-left: 12px; }
 
-    .player-list { display:flex; flex-direction:column; gap:6px; }
-    .player-row { display:flex; align-items:center; gap:8px; padding:8px 12px; background:#0a3522; border:1px solid #1c6b46; border-radius:8px; }
-    .player-row.current { border-color: var(--gold); background: rgba(244,196,48,0.12); box-shadow: 0 0 12px rgba(244,196,48,0.25); }
-    .player-row .seat { font-size:16px; width:22px; text-align:center; }
-    .player-row .pname { flex:1; font-weight:600; }
-    .player-row.current .pname { color: var(--gold); }
-    .player-row .ord { color:#6fcfa0; font-size:12px; width:20px; }
+    .hostq { position: relative; font-size: 21px; line-height: 1.35; text-align: center; padding: 20px 16px 16px; background: linear-gradient(180deg, #0a3522, #03160e); border: 1px solid var(--rim); border-radius: 10px; margin-bottom: 14px; }
+    .onscreen { position: absolute; top: 6px; right: 8px; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); }
+    .onscreen.on { color: #56e6a0; }
 
     .host-answers { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
-    .host-ans { display:flex; align-items:center; gap:10px; padding: 12px 16px; border:2px solid var(--rim); border-radius: 8px; cursor: pointer; background:#0a3522; transition: all 0.15s; font-size: 16px; user-select:none; }
-    .host-ans:hover { border-color: var(--gold-bright); }
-    .host-ans .letter { color: var(--gold); font-weight:700; }
+    .host-ans { position: relative; display: flex; align-items: center; gap: 10px; padding: 12px 16px; border: 2px solid var(--rim); border-radius: 8px; cursor: pointer; background: var(--panel-solid); transition: background 0.15s, opacity 0.2s, border-color 0.15s; font-size: 16px; user-select: none; text-align: left; color: #fff; font-weight: 500; justify-content: flex-start; white-space: normal; }
+    .host-ans:hover:not(:disabled) { border-color: var(--gold-bright); background: #0d4a30; }
+    .host-ans .letter { color: var(--gold); font-weight: 800; }
+    .host-ans .tag { margin-left: auto; font-size: 11px; font-weight: 700; letter-spacing: .5px; }
+    .host-ans.not-shown { opacity: 0.5; }
+    .host-ans.removed { opacity: 0.25; text-decoration: line-through; }
     .host-ans.is-correct { box-shadow: inset 0 0 0 2px var(--emerald-bright); }
-    .host-ans.is-correct::after { content:'✓ correct'; margin-left:auto; color: var(--emerald-bright); font-size: 12px; font-weight:700; }
-    .host-ans.sel { background: linear-gradient(180deg,var(--gold-bright),var(--gold)); color:#2a1d00; }
-    .host-ans.sel .letter { color:#2a1d00; }
-    .host-ans.lock { background: linear-gradient(180deg,var(--gold-bright),var(--gold)); color:#2a1d00; outline: 2px solid #fff; }
+    .host-ans.is-correct .tag { color: var(--emerald-bright); }
+    .host-ans.sel, .host-ans.lock { background: linear-gradient(180deg, var(--gold-bright), var(--gold)); color: var(--ink-on-gold); }
+    .host-ans.sel .letter, .host-ans.lock .letter, .host-ans.sel .tag, .host-ans.lock .tag { color: var(--ink-on-gold); }
+    .host-ans.lock { outline: 2px solid #fff; outline-offset: 1px; }
+    .host-ans.result-right { background: linear-gradient(180deg, #3cf08e, var(--emerald-bright)); color: #03220f; }
+    .host-ans.result-wrong { background: linear-gradient(180deg, #ff5d6a, var(--red)); color: #2a0508; }
+    .host-ans.result-right .letter, .host-ans.result-wrong .letter, .host-ans.result-right .tag, .host-ans.result-wrong .tag { color: inherit; }
 
-    .controls { display:flex; flex-wrap: wrap; gap: 8px; }
-    button { font-family: inherit; font-size: 14px; font-weight:600; padding: 9px 14px; border-radius: 8px; border:1px solid #1c6b46; background:#0c5c3a; color:#fff; cursor:pointer; transition: background .15s, transform .05s; }
-    button:hover { background:#0f7a4d; }
-    button:active { transform: translateY(1px); }
-    button:disabled { opacity:.4; cursor:not-allowed; }
-    button.gold { background: linear-gradient(180deg,#f4c430,#d6a800); color:#241a00; border-color:#ffe07a; }
-    button.green { background: var(--green); border-color:#7df0aa; }
-    button.red { background: var(--red); border-color:#ffb3b3; }
-    button.ghost { background: transparent; }
+    .flow { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+    .flow button { justify-content: space-between; white-space: normal; text-align: left; }
+    .flow kbd { margin-left: 6px; }
+    .hint { margin-top: 10px; padding: 8px 12px; border-radius: 8px; background: rgba(22,193,114,0.08); border: 1px dashed var(--panel-line); color: #cfe9da; font-size: 13px; }
+    .hint b { color: var(--gold-bright); }
 
-    .row { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-top: 10px; }
-    .divider { height:1px; background:#1c6b46; margin:14px 0; }
-    .ll-row { display:flex; gap:10px; flex-wrap:wrap; }
-    .ll-btn { display:flex; flex-direction:column; align-items:center; gap:4px; min-width: 90px; }
-    .small { font-size: 12px; color:#6fcfa0; }
+    .lifeline-card { background: var(--panel-solid); border: 1px solid var(--panel-line); border-radius: 10px; padding: 12px; }
+    .lifeline-card + .lifeline-card { margin-top: 10px; }
+    .lc-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+    .lc-title { font-weight: 800; color: var(--gold); font-size: 15px; }
+    .lc-status { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; padding: 2px 9px; border-radius: 10px; background: rgba(22,193,114,0.18); color: #56e6a0; border: 1px solid rgba(22,193,114,0.45); white-space: nowrap; }
+    .lc-status.used { background: rgba(224,65,79,0.16); color: #ff8a93; border-color: rgba(224,65,79,0.45); }
+    .lc-desc { font-size: 12px; color: var(--muted); margin: 6px 0 10px; line-height: 1.45; }
+    .phone-left { font-weight: 800; color: var(--gold); font-size: 20px; min-width: 3ch; }
+    .aud-mode { border-top: 1px dashed var(--panel-line); padding-top: 10px; margin-top: 10px; }
+    .aud-mode-label { font-weight: 700; color: #dff0e7; font-size: 13px; margin-bottom: 6px; }
+    .tag-rec { font-size: 10px; background: var(--gold); color: #241a00; padding: 1px 7px; border-radius: 8px; margin-left: 6px; text-transform: uppercase; letter-spacing: .5px; vertical-align: middle; }
+    .audience-edit { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+    .audience-edit label { display: flex; align-items: center; gap: 4px; font-size: 12px; color: var(--gold); font-weight: 700; }
+    .audience-edit input { width: 100%; min-width: 0; }
+    .vote-tally { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; }
+    .vrow { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+    .vrow .vl { width: 16px; color: var(--gold); font-weight: 700; }
+    .vrow .vt { flex: 1; height: 14px; background: var(--field); border-radius: 7px; overflow: hidden; border: 1px solid var(--panel-line); }
+    .vrow .vf { display: block; height: 100%; background: linear-gradient(90deg, var(--gold), var(--orange)); width: 0; transition: width .4s; }
+    .vrow .vn { width: 70px; text-align: right; color: #cfe9da; }
 
-    /* editor */
-    .editor { display:none; }
-    .editor.show { display:block; }
-    .q-list { max-height: 280px; overflow-y:auto; display:flex; flex-direction:column; gap:6px; margin-bottom:12px; }
-    .q-item { display:flex; align-items:center; gap:8px; padding:8px 10px; background:#061b52; border:1px solid #24407e; border-radius:6px; cursor:pointer; }
-    .q-item.active { border-color: var(--gold); }
-    .q-item .qt { flex:1; font-size:13px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-    .q-item .badge { font-size:11px; color:#9fb4e8; }
-    .form-row { display:flex; flex-direction:column; gap:6px; margin-bottom:8px; }
-    .form-row label { font-size:12px; color:#9fb4e8; }
-    input[type=text] { padding:8px 10px; border-radius:6px; border:1px solid #2a4a96; background:#03103a; color:#fff; font-family:inherit; font-size:14px; }
-    .ans-edit { display:grid; grid-template-columns: auto 1fr; gap:8px; align-items:center; }
-    .ans-edit input[type=radio] { width:18px; height:18px; }
-    .audience-edit { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
-    .audience-edit input { width:64px; }
+    .player-list { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; }
+    .player-row { display: flex; align-items: center; gap: 6px; padding: 6px 8px; background: var(--panel-solid); border: 1px solid var(--panel-line); border-radius: 8px; }
+    .player-row.current { border-color: var(--gold); background: rgba(244,196,48,0.12); }
+    .player-row .ord { color: var(--muted-2); font-size: 12px; width: 18px; text-align: right; }
+    .player-row .pname { flex: 1; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .player-row.current .pname { color: var(--gold); }
+    .player-row.current .pname::before { content: '🪑 '; }
 
-    /* Lifeline cards */
-    .lifeline-cards { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
-    .lifeline-card { background:#0a3522; border:1px solid #1c6b46; border-radius:10px; padding:12px 14px; }
-    .lifeline-card.wide { grid-column:1 / -1; }
-    .lc-head { display:flex; align-items:center; justify-content:space-between; gap:8px; }
-    .lc-title { font-weight:800; color:var(--gold); font-size:16px; letter-spacing:.5px; }
-    .lc-status { font-size:11px; text-transform:uppercase; letter-spacing:1px; padding:2px 9px; border-radius:10px; background:rgba(22,193,114,0.18); color:#56e6a0; border:1px solid rgba(22,193,114,0.45); white-space:nowrap; }
-    .lc-status.used { background:rgba(224,65,79,0.16); color:#ff8a93; border-color:rgba(224,65,79,0.45); }
-    .lc-desc { font-size:12px; color:#9fc7b3; margin:6px 0 10px; line-height:1.45; }
-    .lc-action { width:100%; }
-    .aud-mode { border-top:1px dashed #1c6b46; padding-top:10px; margin-top:12px; }
-    .aud-mode-label { font-weight:700; color:#dff0e7; font-size:13px; margin-bottom:6px; }
-    .tag-rec { font-size:10px; background:var(--gold); color:#241a00; padding:1px 7px; border-radius:8px; margin-left:6px; text-transform:uppercase; letter-spacing:.5px; vertical-align:middle; }
+    .editor-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; }
+    .q-list { max-height: 420px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; padding-right: 4px; }
+    .q-item { display: flex; align-items: center; gap: 6px; padding: 6px 8px; background: var(--panel-solid); border: 1px solid var(--panel-line); border-radius: 6px; cursor: pointer; }
+    .q-item:hover { border-color: var(--gold-soft); }
+    .q-item.active { border-color: var(--gold); background: rgba(244,196,48,0.1); }
+    .q-item.extra { opacity: 0.6; }
+    .q-item.live .badge { background: var(--gold); color: #241a00; }
+    .q-item .badge { font-size: 11px; color: var(--muted); min-width: 30px; text-align: center; padding: 1px 4px; border-radius: 6px; }
+    .q-item .qt { flex: 1; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .q-item .amt { font-size: 11px; color: var(--gold-soft); }
+    .q-item button { padding: 2px 7px; font-size: 12px; }
+    .form-row { display: flex; flex-direction: column; gap: 6px; margin-bottom: 10px; }
+    .form-row label, .form-label { font-size: 12px; color: var(--muted); }
+    textarea { resize: vertical; min-height: 64px; }
+    .ans-edit { display: grid; grid-template-columns: auto auto 1fr; gap: 8px; align-items: center; }
+    .ans-edit .l { color: var(--gold); font-weight: 800; width: 14px; }
+    .ans-edit input[type=radio] { width: 18px; height: 18px; accent-color: var(--emerald-bright); }
 
-    .vote-tally { display:flex; flex-direction:column; gap:6px; }
-    .vote-tally .vrow { display:flex; align-items:center; gap:8px; font-size:13px; }
-    .vote-tally .vrow .vl { width:16px; color:var(--gold); font-weight:700; }
-    .vote-tally .vrow .vt { flex:1; height:16px; background:#03103a; border-radius:8px; overflow:hidden; border:1px solid #24407e; }
-    .vote-tally .vrow .vf { height:100%; background:linear-gradient(90deg,var(--gold),var(--orange)); width:0; transition:width .4s; }
-    .vote-tally .vrow .vn { width:64px; text-align:right; color:#cdd9ff; }
+    .links { display: flex; gap: 14px; align-items: center; }
+    .links img { width: 110px; height: 110px; border-radius: 8px; background: #fff; padding: 4px; }
+    .link-line { display: flex; gap: 6px; align-items: center; margin-bottom: 8px; }
+    .link-line code { flex: 1; font-size: 12px; color: var(--gold-bright); background: var(--field); border: 1px solid var(--panel-line); padding: 5px 8px; border-radius: 6px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+    .modal { background: #04190f; border: 1px solid var(--gold-soft); border-radius: 14px; padding: 22px; max-width: 520px; width: 100%; text-align: left; }
+    .modal h3 { color: var(--gold); margin-bottom: 12px; }
+    .keys { display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; font-size: 14px; color: #cfe9da; }
+
+    @media (max-width: 1200px) {
+      .host { grid-template-columns: 190px minmax(0, 1fr); }
+      .col.side { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); }
+    }
+    @media (max-width: 760px) {
+      .host { grid-template-columns: 1fr; padding: 10px; }
+      .col.ladder-col { order: 2; }
+      .host-answers, .editor-grid { grid-template-columns: 1fr; }
+      .flow kbd { display: none; }
+    }
   </style>
 </head>
 <body>
-  <div class="connection" id="conn">● connecting…</div>
-  <div class="host">
+  <header class="topbar">
+    <div class="brand">Million Dollar <span>Question</span></div>
+    <span class="phase" id="phase">intro</span>
+    <div class="spacer"></div>
+    <label><input type="checkbox" id="soundToggle" checked /> Host sounds</label>
+    <button class="ghost small" id="btnKeys" title="Keyboard shortcuts (?)">⌨ Shortcuts</button>
+    <a class="btn ghost small" href="/display" target="_blank" rel="noopener">Open big screen ↗</a>
+    <div class="connection" id="conn">● connecting…</div>
+  </header>
+
+  <main class="host">
     <!-- Ladder -->
-    <div class="panel">
-      <div class="host-brand">
-        <span class="brand-logo">
-          <img src="/logo.png" alt="Million Dollar Question" onerror="this.style.display='none';this.nextElementSibling.style.display='block';" />
-          <span class="logo-fallback" style="display:none;"><span class="l1">MILLION</span><br/><span class="l2">DOLLAR</span><br/><span class="l3">QUESTION</span></span>
-        </span>
+    <div class="col ladder-col">
+      <div class="panel">
+        <h2>Prize Ladder</h2>
+        <ul class="ladder" id="ladder" title="Click a rung to jump to that question"></ul>
+        <p class="small ladder-note">Click a rung to jump there. Safe havens are outlined.</p>
       </div>
-      <h2>Prize Ladder</h2>
-      <ul class="ladder" id="ladder"></ul>
     </div>
 
     <!-- Main control -->
-    <div>
-      <div class="panel">
+    <div class="col">
+      <section class="panel">
         <div class="qstrip">
-          <div>
-            <button id="btnPrev" class="ghost">◀ Prev</button>
-            <button id="btnNext" class="ghost">Next ▶</button>
+          <div class="row">
+            <button id="btnPrev" class="ghost" title="Previous question (P)">◀ Prev</button>
+            <button id="btnNext" class="ghost" title="Next question (N)">Next ▶</button>
           </div>
-          <div class="meta">Question <span id="qNum">1</span> / <span id="qTotal">15</span> — <span class="amt" id="qAmt">$100</span></div>
-          <div>
-            <button id="btnStart" class="gold">Start Game</button>
+          <div class="meta">Question <b id="qNum">1</b> of <span id="qTotal">15</span> · <span class="amt" id="qAmt">$100</span><span class="safe-tag hidden" id="safeTag">safe haven</span><br /><span class="small" id="qBanked"></span></div>
+          <div class="row">
+            <button id="btnStart" class="gold">▶ Start Game</button>
             <button id="btnReset" class="ghost">Reset</button>
           </div>
         </div>
 
-        <div class="hotseat-bar" id="hotseatBar">In the hot seat: <b id="hotName">— no players —</b><span id="nextName" class="next"></span></div>
-        <div class="hostq" id="hostQ">—</div>
+        <div class="hotseat-bar" id="hotseatBar">In the hot seat: <b id="hotName">— add players below —</b><span id="nextName" class="next"></span></div>
+
+        <div class="hostq"><span class="onscreen" id="qOnScreen">hidden</span><span id="hostQ">—</span></div>
         <div class="host-answers" id="hostAnswers"></div>
 
-        <div class="controls">
-          <button id="btnRevealQ">Reveal Question</button>
-          <button id="btnRevealA">Reveal Answer A (0/4)</button>
-          <button id="btnRevealAll" class="ghost">Reveal All</button>
-          <button id="btnLock" class="gold">🔒 Lock In</button>
-          <button id="btnResult" class="green">Reveal Answer</button>
-          <button id="btnSkip" class="gold">⏭ Skip → Next Player</button>
-          <button id="btnWalk" class="red">Walk Away</button>
-          <button id="btnClearBanner" class="ghost">Clear Overlay</button>
+        <div class="flow">
+          <button id="btnRevealQ">Reveal Question <kbd>Q</kbd></button>
+          <button id="btnRevealA">Reveal Answer A <kbd>Space</kbd></button>
+          <button id="btnRevealAll" class="ghost">Reveal All <kbd>A</kbd></button>
+          <button id="btnLock" class="gold">🔒 Lock In <kbd>L</kbd></button>
+          <button id="btnUnlock" class="ghost">Unlock <kbd>U</kbd></button>
+          <button id="btnResult" class="green">Reveal Answer <kbd>↵</kbd></button>
+          <button id="btnNext2" class="ghost">Next Question <kbd>N</kbd></button>
+          <button id="btnSkip" class="gold">⏭ Next Player <kbd>S</kbd></button>
+          <button id="btnWalk" class="red">Walk Away <kbd>W</kbd></button>
+          <button id="btnClearBanner" class="ghost">Clear Overlay <kbd>Esc</kbd></button>
         </div>
-        <div class="small" style="margin-top:8px;">Tip: <b>Reveal Answer</b> shows them one at a time (A→B→C→D); dimmed answers aren't on the big screen yet. Click an answer to highlight the contestant's pick (orange), then <b>Lock In</b>, then <b>Reveal Answer</b> to show if it's right. The correct answer stays hidden from you until lock-in.</div>
-      </div>
+        <div class="hint" id="hint"></div>
+      </section>
 
-      <div class="panel" style="margin-top:14px;">
-        <h2>Lifelines</h2>
-        <p class="small" style="margin:-4px 0 12px;">Each lifeline can be used once per game. Using one shows it on the contestant screen and crosses it off.</p>
-
-        <div class="lifeline-cards">
-
-          <!-- 50:50 -->
-          <div class="lifeline-card">
-            <div class="lc-head">
-              <span class="lc-title">50 : 50</span>
-              <span class="lc-status" id="status5050">Available</span>
-            </div>
-            <p class="lc-desc">Removes two of the wrong answers from both screens.</p>
-            <button id="btn5050" class="gold lc-action">Use 50:50</button>
-          </div>
-
-          <!-- Phone a Friend -->
-          <div class="lifeline-card">
-            <div class="lc-head">
-              <span class="lc-title">☎ Phone a Friend</span>
-              <span class="lc-status" id="statusPhone">Available</span>
-            </div>
-            <p class="lc-desc">Puts a 30-second countdown on the contestant screen.</p>
-            <div class="row" style="margin-top:0;">
-              <button id="btnPhone" class="gold">Start 30s Timer</button>
-              <button id="btnPhoneStop" class="ghost">Stop Timer</button>
-            </div>
-          </div>
-
-          <!-- Ask the Audience -->
-          <div class="lifeline-card wide">
-            <div class="lc-head">
-              <span class="lc-title">👥 Ask the Audience</span>
-              <span class="lc-status" id="statusAudience">Available</span>
-            </div>
-            <p class="lc-desc">Shows a bar chart of the audience vote on the contestant screen. Choose <b>one</b> of these three ways to run it:</p>
-
-            <div class="aud-mode">
-              <div class="aud-mode-label">① Live phone vote <span class="tag-rec">recommended</span></div>
-              <p class="lc-desc" style="margin:0 0 8px;">The audience votes from their phones at <b id="voteUrl">…</b></p>
-              <div class="row" style="margin-top:0;">
-                <button id="btnOpenVote" class="green">Open Voting</button>
-                <button id="btnCloseVote" class="gold">Close &amp; Lock Result</button>
-                <button id="btnResetVote" class="ghost small">clear votes</button>
-                <span class="small">Voting is <b id="voteStatus">closed</b> · <b id="voteTotal">0</b> votes in</span>
-              </div>
-              <div class="vote-tally" id="voteTally" style="margin-top:10px;"></div>
-            </div>
-
-            <div class="aud-mode">
-              <div class="aud-mode-label">② Auto-generate</div>
-              <div class="row" style="margin-top:0;">
-                <button id="btnAudAuto" class="ghost">Show Realistic Numbers</button>
-                <span class="small">Instantly fills the chart with believable percentages.</span>
-              </div>
-            </div>
-
-            <div class="aud-mode">
-              <div class="aud-mode-label">③ Enter the numbers yourself</div>
-              <div class="audience-edit">
-                <span class="small">A</span><input type="text" id="audA" value="25" />
-                <span class="small">B</span><input type="text" id="audB" value="25" />
-                <span class="small">C</span><input type="text" id="audC" value="25" />
-                <span class="small">D</span><input type="text" id="audD" value="25" />
-                <button id="btnAudApply" class="ghost">Show These %</button>
-              </div>
-            </div>
-
-            <div class="row">
-              <button id="btnAudHide" class="ghost small">Hide chart from contestant screen</button>
-            </div>
-          </div>
-
-        </div>
-      </div>
-
-      <div class="panel" style="margin-top:14px;">
-        <h2>🪑 Hot Seat &amp; Players</h2>
-        <div class="row">
-          <input type="text" id="playerName" placeholder="Add player name…" style="flex:1;min-width:160px;" />
-          <button id="btnAddPlayer" class="green">+ Add</button>
-        </div>
-        <div class="player-list" id="playerList" style="margin-top:10px;"></div>
-        <div class="small" id="playerHint" style="margin-top:8px;">Add the players in turn order. The ⏭ Skip button passes the hot seat to the next player, who takes on the same question.</div>
-      </div>
-
-      <div class="panel" style="margin-top:14px;">
-        <div class="row" style="justify-content:space-between;">
-          <h2 style="margin:0;">Questions</h2>
+      <section class="panel" id="questionsPanel">
+        <h2>Question Bank <span class="small" id="bankInfo"></span></h2>
+        <div class="editor-grid">
           <div>
-            <label class="small"><input type="checkbox" id="soundToggle" checked /> sound on host</label>
-            <button id="btnToggleEditor" class="ghost">Edit Questions ✎</button>
+            <div class="q-list" id="qList"></div>
+            <div class="row" style="margin-top:10px;">
+              <button id="btnNewQ" class="green small">+ New question</button>
+              <button id="btnExport" class="ghost small">⇩ Export</button>
+              <button id="btnImport" class="ghost small">⇧ Import</button>
+              <button id="btnSamples" class="ghost small">Restore samples</button>
+              <input type="file" id="importFile" accept=".json,.csv,application/json,text/csv" class="hidden" />
+            </div>
+            <p class="small" style="margin-top:8px;">Questions play top to bottom, easiest first. Only the first 15 are used in a game. Import a JSON export, or a CSV with columns <i>question, A, B, C, D, correct letter</i>.</p>
           </div>
+          <form id="qForm" autocomplete="off">
+            <div class="form-row">
+              <label for="edQ" id="edTitle">New question</label>
+              <textarea id="edQ" placeholder="Type the question…" maxlength="300"></textarea>
+            </div>
+            <div class="form-row">
+              <span class="form-label">Answers — tick the correct one</span>
+              <div class="ans-edit"><input type="radio" name="correct" value="0" aria-label="A is correct" /><span class="l">A</span><input type="text" id="edA0" placeholder="Answer A" maxlength="300" /></div>
+              <div class="ans-edit"><input type="radio" name="correct" value="1" aria-label="B is correct" /><span class="l">B</span><input type="text" id="edA1" placeholder="Answer B" maxlength="300" /></div>
+              <div class="ans-edit"><input type="radio" name="correct" value="2" aria-label="C is correct" /><span class="l">C</span><input type="text" id="edA2" placeholder="Answer C" maxlength="300" /></div>
+              <div class="ans-edit"><input type="radio" name="correct" value="3" aria-label="D is correct" /><span class="l">D</span><input type="text" id="edA3" placeholder="Answer D" maxlength="300" /></div>
+            </div>
+            <div class="row">
+              <button type="submit" id="btnSaveQ" class="green">Save question</button>
+              <button type="button" id="btnDeleteQ" class="red">Delete</button>
+              <button type="button" id="btnShuffleQ" class="ghost small" title="Shuffle the answer order">🔀 Shuffle answers</button>
+            </div>
+          </form>
         </div>
-        <div class="editor" id="editor">
-          <div class="divider"></div>
-          <div class="q-list" id="qList"></div>
-          <button id="btnNewQ" class="ghost">+ New question</button>
-          <div class="divider"></div>
-          <div class="form-row">
-            <label>Question text</label>
-            <input type="text" id="edQ" placeholder="Type the question…" />
-          </div>
-          <div class="form-row">
-            <label>Answers (select the correct one)</label>
-            <div class="ans-edit"><input type="radio" name="correct" value="0" /><input type="text" id="edA0" placeholder="Answer A" /></div>
-            <div class="ans-edit"><input type="radio" name="correct" value="1" /><input type="text" id="edA1" placeholder="Answer B" /></div>
-            <div class="ans-edit"><input type="radio" name="correct" value="2" /><input type="text" id="edA2" placeholder="Answer C" /></div>
-            <div class="ans-edit"><input type="radio" name="correct" value="3" /><input type="text" id="edA3" placeholder="Answer D" /></div>
-          </div>
+      </section>
+    </div>
+
+    <!-- Side: lifelines, players, links -->
+    <div class="col side">
+      <section class="panel">
+        <h2>Lifelines</h2>
+        <div class="lifeline-card">
+          <div class="lc-head"><span class="lc-title">50 : 50</span><span class="lc-status" id="status5050">Available</span></div>
+          <p class="lc-desc">Removes two wrong answers from every screen.</p>
+          <button id="btn5050" class="gold">Use 50:50</button>
+        </div>
+
+        <div class="lifeline-card">
+          <div class="lc-head"><span class="lc-title">☎ Phone a Friend</span><span class="lc-status" id="statusPhone">Available</span></div>
+          <p class="lc-desc">Puts a countdown on the big screen.</p>
           <div class="row">
-            <button id="btnSaveQ" class="green">Save question</button>
-            <button id="btnDeleteQ" class="red">Delete</button>
-            <span class="small" id="edStatus"></span>
+            <select id="phoneSecs" aria-label="Timer length"><option value="30" selected>30 s</option><option value="45">45 s</option><option value="60">60 s</option></select>
+            <button id="btnPhone" class="gold">Start Timer</button>
+            <button id="btnPhoneStop" class="ghost">Stop</button>
+            <span class="phone-left" id="phoneLeft"></span>
           </div>
         </div>
+
+        <div class="lifeline-card">
+          <div class="lc-head"><span class="lc-title">👥 Ask the Audience</span><span class="lc-status" id="statusAudience">Available</span></div>
+          <p class="lc-desc">Shows a bar chart on the big screen. Pick one way to run it:</p>
+          <div class="aud-mode" style="border-top:0; margin-top:0; padding-top:0;">
+            <div class="aud-mode-label">① Live phone vote <span class="tag-rec">best</span></div>
+            <p class="lc-desc" style="margin:0 0 8px;">The big screen shows a QR code. Phones vote at <b id="voteUrlInline">/vote</b></p>
+            <div class="row">
+              <button id="btnOpenVote" class="green">Open Voting</button>
+              <button id="btnCloseVote" class="gold">Close &amp; Lock</button>
+              <button id="btnResetVote" class="ghost small">Clear votes</button>
+            </div>
+            <div class="small" style="margin-top:6px;">Voting is <b id="voteStatus">closed</b> · <b id="voteTotal">0</b> votes</div>
+            <div class="vote-tally" id="voteTally"></div>
+          </div>
+          <div class="aud-mode">
+            <div class="aud-mode-label">② Auto-generate</div>
+            <button id="btnAudAuto" class="ghost">Show realistic numbers</button>
+          </div>
+          <div class="aud-mode">
+            <div class="aud-mode-label">③ Enter your own %</div>
+            <div class="audience-edit">
+              <label>A <input type="number" min="0" max="100" id="audA" value="25" /></label>
+              <label>B <input type="number" min="0" max="100" id="audB" value="25" /></label>
+              <label>C <input type="number" min="0" max="100" id="audC" value="25" /></label>
+              <label>D <input type="number" min="0" max="100" id="audD" value="25" /></label>
+            </div>
+            <button id="btnAudApply" class="ghost" style="margin-top:8px;">Show these numbers</button>
+          </div>
+          <div class="row aud-mode">
+            <button id="btnAudShow" class="ghost small">Show chart again</button>
+            <button id="btnAudHide" class="ghost small">Hide chart</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>🪑 Players &amp; Hot Seat</h2>
+        <form class="row" id="playerForm">
+          <input type="text" id="playerName" placeholder="Add a player…" maxlength="40" style="flex:1; min-width:140px;" />
+          <button type="submit" class="green">+ Add</button>
+        </form>
+        <div class="player-list" id="playerList"></div>
+        <p class="small" style="margin-top:8px;">Add players in turn order. <b>Next Player</b> passes the hot seat on — the next person faces the same question.</p>
+      </section>
+
+      <section class="panel">
+        <h2>Screens &amp; Links</h2>
+        <div class="links">
+          <img src="/qr/vote.svg" alt="QR code for audience voting" />
+          <div style="flex:1; min-width:0;">
+            <div class="small">Big screen</div>
+            <div class="link-line"><code id="displayUrl">…</code><button class="ghost small" data-copy="displayUrl">Copy</button></div>
+            <div class="small">Audience phones</div>
+            <div class="link-line"><code id="voteUrl">…</code><button class="ghost small" data-copy="voteUrl">Copy</button></div>
+            <div class="small">Host link for another device (keep private)</div>
+            <div class="link-line"><code id="hostUrl">…</code><button class="ghost small" data-copy="hostUrl">Copy</button></div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <!-- Host key gate -->
+  <div class="overlay" id="gate">
+    <form class="modal" id="gateForm">
+      <h3>Enter the host key</h3>
+      <p class="muted" style="margin-bottom:12px;">The key is printed in the terminal where you ran <code>node server.js</code>, at the end of the “Host controls” link. It stops phones on the Wi-Fi from running the game.</p>
+      <div class="row">
+        <input type="password" id="gateKey" placeholder="host key" style="flex:1;" autocomplete="off" autocapitalize="off" />
+        <button type="submit" class="gold">Unlock</button>
       </div>
+      <p class="small" id="gateMsg" style="margin-top:8px;"></p>
+    </form>
+  </div>
+
+  <!-- Keyboard help -->
+  <div class="overlay" id="keysOverlay">
+    <div class="modal">
+      <h3>Keyboard shortcuts</h3>
+      <div class="keys">
+        <kbd>Q</kbd><span>Reveal the question</span>
+        <kbd>Space</kbd><span>Reveal the next answer</span>
+        <kbd>A</kbd><span>Reveal all answers</span>
+        <kbd>1</kbd><span>– <kbd>4</kbd> select answer A–D (press again to clear)</span>
+        <kbd>L</kbd><span>Lock in the selected answer</span>
+        <kbd>U</kbd><span>Unlock (before the reveal)</span>
+        <kbd>Enter</kbd><span>Reveal whether it's right</span>
+        <kbd>N</kbd><span>Next question &nbsp; <kbd>P</kbd> previous</span>
+        <kbd>S</kbd><span>Pass to the next player</span>
+        <kbd>W</kbd><span>Walk away (asks first)</span>
+        <kbd>Esc</kbd><span>Clear overlays on the big screen</span>
+        <kbd>?</kbd><span>Show / hide this help</span>
+      </div>
+      <div class="row" style="margin-top:16px; justify-content:flex-end;"><button class="gold" id="btnKeysClose">Got it</button></div>
     </div>
   </div>
 
